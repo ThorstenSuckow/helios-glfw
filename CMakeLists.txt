@@ -44,6 +44,32 @@ else()
     set(HELIOS_ECS_SOURCE_DIR "${helios_ecs_SOURCE_DIR}")
 endif()
 
+if(NOT TARGET thirdparty::glfw OR NOT TARGET thirdparty::glad)
+    set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+
+    FetchContent_Declare(glfw
+            GIT_REPOSITORY https://github.com/glfw/glfw.git
+            GIT_TAG 3.4
+    )
+    FetchContent_Declare(glad
+            GIT_REPOSITORY https://github.com/Dav1dde/glad.git
+            GIT_TAG v2.0.8
+            SOURCE_SUBDIR cmake
+    )
+    FetchContent_MakeAvailable(glfw glad)
+
+    if(NOT TARGET thirdparty::glad)
+        glad_add_library(glad_gl_core_46 STATIC REPRODUCIBLE LOADER API gl:core=4.6)
+        add_library(thirdparty::glad ALIAS glad_gl_core_46)
+    endif()
+
+    if(NOT TARGET thirdparty::glfw)
+        add_library(thirdparty::glfw ALIAS glfw)
+    endif()
+endif()
+
 file(GLOB_RECURSE CPP_FILES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
