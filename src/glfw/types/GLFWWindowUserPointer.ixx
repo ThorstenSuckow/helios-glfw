@@ -10,7 +10,6 @@ import helios.runtime.world.EngineWorld;
 import helios.platform.window.concepts.IsWindowHandle;
 import helios.runtime.messaging.command.concepts;
 
-using namespace helios::ecs::types;
 using namespace helios::runtime::world;
 using namespace helios::platform::window::concepts;
 using namespace helios::runtime::messaging::command::concepts;
