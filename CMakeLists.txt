@@ -19,7 +19,7 @@ endif()
 
 set(HELIOS_ENGINE_LOCAL_PATH "${CMAKE_CURRENT_LIST_DIR}/../helios-engine" CACHE PATH "Local path to helios-engine repository")
 set(HELIOS_ECS_LOCAL_PATH "${CMAKE_CURRENT_LIST_DIR}/../helios-ecs" CACHE PATH "Local path to helios-ecs repository")
-if(NOT TARGET helios)
+if(NOT TARGET helios::engine)
     if(EXISTS "${HELIOS_ENGINE_LOCAL_PATH}/CMakeLists.txt")
         add_subdirectory("${HELIOS_ENGINE_LOCAL_PATH}" "${CMAKE_BINARY_DIR}/_deps/helios-engine-build")
     else()
@@ -97,8 +97,8 @@ endif()
 
 target_link_libraries(helios_glfw
         PUBLIC
-        $<BUILD_INTERFACE:helios>
-        $<INSTALL_INTERFACE:helios::helios>
+        $<BUILD_INTERFACE:helios::engine>
+        $<INSTALL_INTERFACE:helios::engine>
         PRIVATE
         $<BUILD_INTERFACE:thirdparty::glad>
         $<BUILD_INTERFACE:thirdparty::glfw>
