@@ -1,4 +1,4 @@
-# helios::platform::glfw::systems
+# helios::engine::platform::glfw::systems
 
 GLFW-specific systems.
 
@@ -11,7 +11,7 @@ GLFW-specific systems.
 ---
 <details>
 <summary>Doxygen</summary><p>
-@namespace helios::platform::glfw::systems
+@namespace helios::engine::platform::glfw::systems
 @brief GLFW-specific systems.
 </p></details>
 

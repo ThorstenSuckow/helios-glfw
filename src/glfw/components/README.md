@@ -1,4 +1,4 @@
-# helios::platform::glfw::components
+# helios::engine::platform::glfw::components
 
 GLFW bridge components.
 
@@ -12,7 +12,7 @@ GLFW bridge components.
 ---
 <details>
 <summary>Doxygen</summary><p>
-@namespace helios::platform::glfw::components
+@namespace helios::engine::platform::glfw::components
 @brief GLFW bridge components.
 </p></details>
 

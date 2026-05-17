@@ -1,4 +1,4 @@
-# helios::platform::glfw
+# helios::engine::platform::glfw
 
 GLFW-backed platform integration.
 
@@ -44,6 +44,6 @@ target_link_libraries(your_target PRIVATE helios::glfw)
 ---
 <details>
 <summary>Doxygen</summary><p>
-@namespace helios::platform::glfw
+@namespace helios::engine::platform::glfw
 @brief GLFW-backed platform integration.
 </p></details>

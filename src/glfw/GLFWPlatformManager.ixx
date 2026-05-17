@@ -13,65 +13,65 @@ module;
 
 export module helios.glfw.GLFWPlatformManager;
 
-import helios.runtime.world.UpdateContext;
-import helios.runtime.world.Session;
+import helios.engine.runtime.world.UpdateContext;
+import helios.engine.runtime.world.Session;
 
-import helios.util.log;
-import helios.core.types;
-import helios.state.Bindings;
+import helios.engine.util.log;
+import helios.engine.core.types;
 
-import helios.spatial.components;
+import helios.engine.runtime.enginestate.types;
 
-import helios.rendering.framebuffer;
+import helios.engine.spatial.components;
 
-import helios.runtime.messaging.command.concepts.IsPlatformCommandBuffer;
-import helios.runtime.messaging.command.CommandHandlerRegistry;
-import helios.runtime.messaging.command.CommandBufferRegistry;
+import helios.engine.rendering.framebuffer;
 
-import helios.state.commands;
-import helios.state.types;
-import helios.gameplay.gamestate.types;
+import helios.engine.runtime.messaging.command.concepts.IsPlatformCommandBuffer;
+import helios.engine.runtime.messaging.command.CommandHandlerRegistry;
+import helios.engine.runtime.messaging.command.CommandBufferRegistry;
 
-import helios.runtime.world.EngineWorld;
-import helios.runtime.world.tags.ManagerRole;
+import helios.engine.state.commands;
+import helios.engine.state.types;
 
-import helios.platform.environment.commands;
-import helios.platform.lifecycle.commands;
-import helios.platform.environment.components;
-import helios.platform.environment.types;
+import helios.engine.runtime.world.EngineWorld;
+import helios.engine.runtime.world.tags.ManagerRole;
 
-import helios.platform.window.commands;
-import helios.platform.window.components;
-import helios.platform.window.types;
+import helios.engine.platform.environment.commands;
+import helios.engine.platform.lifecycle.commands;
+import helios.engine.platform.environment.components;
+import helios.engine.platform.environment.types;
+
+import helios.engine.platform.window.commands;
+import helios.engine.platform.window.components;
+import helios.engine.platform.window.types;
 
 import helios.glfw.components;
 import helios.glfw.types;
 
-import helios.runtime.concepts;
-import helios.runtime.messaging.command;
-import helios.platform.window.concepts.IsWindowHandle;
+import helios.engine.runtime.concepts;
+import helios.engine.runtime.messaging.command;
+import helios.engine.platform.window.concepts.IsWindowHandle;
 
-using namespace helios::rendering::framebuffer::types;
-using namespace helios::rendering::framebuffer::components;
-using namespace helios::spatial::components;
-using namespace helios::runtime::world::tags;
-using namespace helios::platform::environment::commands;
-using namespace helios::platform::lifecycle::commands;
-using namespace helios::platform::environment::types;
-using namespace helios::platform::environment::components;
-using namespace helios::platform::window::commands;
-using namespace helios::platform::window::types;
-using namespace helios::platform::window::components;
+using namespace helios::engine::rendering::framebuffer::types;
+using namespace helios::engine::rendering::framebuffer::components;
+using namespace helios::engine::spatial::components;
+using namespace helios::engine::runtime::world::tags;
+using namespace helios::engine::platform::environment::commands;
+using namespace helios::engine::platform::lifecycle::commands;
+using namespace helios::engine::platform::environment::types;
+using namespace helios::engine::platform::environment::components;
+using namespace helios::engine::platform::window::commands;
+using namespace helios::engine::platform::window::types;
+using namespace helios::engine::platform::window::components;
 using namespace helios::glfw::components;
 using namespace helios::glfw::types;
-using namespace helios::gameplay::gamestate::types;
-using namespace helios::state::commands;
-using namespace helios::state::types;
-using namespace helios::runtime::messaging::command::concepts;
-using namespace helios::core::types;
-using namespace helios::runtime::messaging::command;
-using namespace helios::runtime::world;
-using namespace helios::platform::window::concepts;
+using namespace helios::engine::state::commands;
+using namespace helios::engine::state::types;
+using namespace helios::engine::runtime::messaging::command::concepts;
+using namespace helios::engine::core::types;
+using namespace helios::engine::runtime::messaging::command;
+using namespace helios::engine::runtime::world;
+using namespace helios::engine::platform::window::concepts;
+using namespace helios::engine::runtime::enginestate::types;
 
 #define HELIOS_LOG_SCOPE "helios::glfw::GLFWPlatformManager"
 export namespace helios::glfw {
@@ -114,7 +114,7 @@ export namespace helios::glfw {
 
         bool openGLLoaded_ = false;
 
-        inline static const helios::util::log::Logger& logger_ = helios::util::log::LogManager::loggerForScope(
+        inline static const helios::engine::util::log::Logger& logger_ = helios::engine::util::log::LogManager::loggerForScope(
                    HELIOS_LOG_SCOPE);
 
         PlatformWorld* platformWorld_;
@@ -138,8 +138,8 @@ export namespace helios::glfw {
             glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
             glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-            assert(updateContext.session().state<GameState>() == GameState::Booting &&
-                "Expected GameState to be Booting during platform initialization");
+            assert(updateContext.session().state<EngineState>() == EngineState::Booting &&
+                "Expected EngineState to be Booting during platform initialization");
 
             initialized_ = updateContext.session().initialize() &&
                            updateContext.runtimeEnvironment().initialize();
@@ -352,7 +352,7 @@ export namespace helios::glfw {
                 return;
             }
 
-            assert((updateContext.session().state<GameState>() != GameState::Booting) &&
+            assert((updateContext.session().state<EngineState>() != EngineState::Booting) &&
                 "GLFWSwapBuffersSystem should not be running during boot");
             assert(glfw->handle && "GLFWWindowComponent has no native handle");
             glfwSwapBuffers(glfw->handle);
@@ -495,10 +495,10 @@ export namespace helios::glfw {
 
             glfwTerminate();
 
-            commandBufferRegistry_->template item<TStateCommandBuffer>()->template add<StateCommand<GameState>>(
-               StateTransitionRequest<GameState>(
-                   updateContext.session().state<GameState>(),
-                   GameStateTransitionId::ShutdownRequest
+            commandBufferRegistry_->template item<TStateCommandBuffer>()->template add<StateCommand<EngineState>>(
+               StateTransitionRequest<EngineState>(
+                   updateContext.session().state<EngineState>(),
+                   EngineStateTransitionId::ShutdownRequest
                )
            );
 
@@ -532,10 +532,10 @@ export namespace helios::glfw {
             }
 
             if (initPlatform(updateContext)) {
-                commandBufferRegistry_->template item<TStateCommandBuffer>()->template add<StateCommand<GameState>>(
-                StateTransitionRequest<GameState>(
-                    updateContext.session().state<GameState>(),
-                    GameStateTransitionId::BootRequest
+                commandBufferRegistry_->template item<TStateCommandBuffer>()->template add<StateCommand<EngineState>>(
+                StateTransitionRequest<EngineState>(
+                    updateContext.session().state<EngineState>(),
+                    EngineStateTransitionId::BootRequest
                 )
             );
             }

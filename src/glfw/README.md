@@ -1,4 +1,4 @@
-# helios::platform::glfw
+# helios::engine::platform::glfw
 
 GLFW-backed platform integration.
 
@@ -24,7 +24,7 @@ layer, including a manager plus GLFW-specific bridge components/types/systems.
 ---
 <details>
 <summary>Doxygen</summary><p>
-@namespace helios::platform::glfw
+@namespace helios::engine::platform::glfw
 @brief GLFW-backed platform integration.
 </p></details>
 

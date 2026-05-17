@@ -9,9 +9,9 @@ module;
 
 export module helios.glfw.components.GLFWWindowHandleComponent;
 
-import helios.platform.window.concepts.IsWindowHandle;
+import helios.engine.platform.window.concepts.IsWindowHandle;
 
-using namespace helios::platform::window::concepts;
+using namespace helios::engine::platform::window::concepts;
 export namespace helios::glfw::components {
 
     /**

@@ -1,4 +1,4 @@
-# helios::platform::glfw::types
+# helios::engine::platform::glfw::types
 
 GLFW interop types.
 
@@ -11,7 +11,7 @@ GLFW interop types.
 ---
 <details>
 <summary>Doxygen</summary><p>
-@namespace helios::platform::glfw::types
+@namespace helios::engine::platform::glfw::types
 @brief GLFW interop types.
 </p></details>
 

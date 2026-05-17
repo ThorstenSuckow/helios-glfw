@@ -8,15 +8,15 @@ module;
 
 export module helios.glfw.components.GLFWWindowUserPointerComponent;
 
-import helios.runtime.world.GameWorld;
+import helios.engine.runtime.world.GameWorld;
 import helios.glfw.types.GLFWWindowUserPointer;
-import helios.platform.window.concepts.IsWindowHandle;
-import helios.runtime.messaging.command.concepts.IsPlatformCommandBuffer;
+import helios.engine.platform.window.concepts.IsWindowHandle;
+import helios.engine.runtime.messaging.command.concepts.IsPlatformCommandBuffer;
 
-using namespace helios::runtime::world;
-using namespace helios::platform::window::concepts;
+using namespace helios::engine::runtime::world;
+using namespace helios::engine::platform::window::concepts;
 using namespace helios::glfw::types;
-using namespace helios::runtime::messaging::command::concepts;
+using namespace helios::engine::runtime::messaging::command::concepts;
 export namespace helios::glfw::components {
 
 
