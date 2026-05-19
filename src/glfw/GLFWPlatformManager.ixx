@@ -47,6 +47,9 @@ import helios.engine.platform.window.types;
 import helios.glfw.components;
 import helios.glfw.types;
 
+import helios.engine.rendering.common.concepts.CanProvideWindowHints;
+import helios.engine.rendering.common.concepts.CanInitializeRenderBackend;
+
 import helios.engine.runtime.concepts;
 import helios.engine.runtime.messaging.command;
 import helios.engine.platform.window.concepts.IsWindowHandle;
@@ -67,6 +70,7 @@ using namespace helios::glfw::types;
 using namespace helios::engine::state::commands;
 using namespace helios::engine::state::types;
 using namespace helios::engine::runtime::messaging::command::concepts;
+using namespace helios::engine::rendering::common::concepts;
 using namespace helios::engine::core::types;
 using namespace helios::engine::runtime::messaging::command;
 using namespace helios::engine::runtime::world;
@@ -85,13 +89,13 @@ export namespace helios::glfw {
      * @tparam THandle Window/entity handle type.
      * @tparam TStateCommandBuffer Command buffer used for follow-up state commands.
      * @tparam TPlatformCommandBuffer Command buffer used by GLFW callbacks for platform commands.
-     *
-     * @todo remove opengl coupling
      */
-    template<typename THandle, typename TStateCommandBuffer = NullCommandBuffer, typename TPlatformCommandBuffer = NullCommandBuffer>
+    template<typename TRenderPlatform, typename THandle, typename TStateCommandBuffer = NullCommandBuffer, typename TPlatformCommandBuffer = NullCommandBuffer>
     requires IsWindowHandle<THandle>
             && IsCommandBufferLike<TStateCommandBuffer>
             && IsPlatformCommandBuffer<TPlatformCommandBuffer>
+            && CanInitializeRenderBackend<TRenderPlatform>
+            && CanProvideWindowHints<TRenderPlatform>
     class GLFWPlatformManager {
 
         std::vector<WindowResizeCommand<THandle>> pendingResizeCommands_;
@@ -112,7 +116,7 @@ export namespace helios::glfw {
 
         bool initialized_ = false;
 
-        bool openGLLoaded_ = false;
+        TRenderPlatform& renderPlatform_;
 
         inline static const helios::engine::util::log::Logger& logger_ = helios::engine::util::log::LogManager::loggerForScope(
                    HELIOS_LOG_SCOPE);
@@ -134,9 +138,7 @@ export namespace helios::glfw {
                 assert(false && "Failed to initialize glfw");
             }
 
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-            glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+            renderPlatform_.provideWindowHints();
 
             assert(updateContext.session().state<EngineState>() == EngineState::Booting &&
                 "Expected EngineState to be Booting during platform initialization");
@@ -233,31 +235,6 @@ export namespace helios::glfw {
         }
 
         /**
-         * @brief Loads OpenGL function pointers for the current context.
-         *
-         * @param updateContext Frame-local update context.
-         *
-         * @return `true` if OpenGL was loaded successfully; otherwise `false`.
-         */
-        bool initOpenGL(UpdateContext& updateContext) noexcept {
-
-            const GLADloadfunc procAddressLoader = glfwGetProcAddress;
-            const int gl_ver = gladLoadGL(procAddressLoader);
-
-            if (gl_ver == 0) {
-                logger_.error("Failed to load OpenGL");
-                assert(false && "Failed to load OpenGL");
-                return false;
-            }
-
-            logger_.info(std::format("OpenGL {0}.{1} loaded", GLAD_VERSION_MAJOR(gl_ver), GLAD_VERSION_MINOR(gl_ver)));
-
-            updateContext.runtimeEnvironment().setGPUReady();
-
-            return true;
-        }
-
-        /**
          * @brief Removes `CurrentContextComponent` from all windows currently marked as active context.
          *
          * @param updateContext Frame-local update context.
@@ -279,7 +256,6 @@ export namespace helios::glfw {
         /**
          * @brief Installs GLFW user-pointer data and framebuffer resize callback for a window.
          *
-         * @param gameWorld Owning game world used by callback command submission.
          * @param handle Window handle for which the listener is installed.
          */
         void installResizeListener(THandle handle) noexcept {
@@ -385,10 +361,9 @@ export namespace helios::glfw {
         /**
          * @brief Applies queued resize commands to window components.
          *
-         * @detail Applies queued resize commands to window components.
+         * @details Applies queued resize commands to window components.
          * This will also affect the underlying framebuffers, for as long
          * as the specific windows are bound to a framebuffer.
-         *
          *
          * @param updateContext Frame-local update context.
          */
@@ -515,8 +490,13 @@ export namespace helios::glfw {
          */
         using EngineRoleTag = ManagerRole;
 
-        explicit GLFWPlatformManager(PlatformWorld& platformWorld, CommandBufferRegistry& commandBufferRegistry)
-        : platformWorld_(&platformWorld), commandBufferRegistry_(&commandBufferRegistry) {};
+        explicit GLFWPlatformManager(
+            TRenderPlatform& renderPlatform,
+            PlatformWorld& platformWorld,
+            CommandBufferRegistry& commandBufferRegistry)
+        : renderPlatform_(renderPlatform),
+          platformWorld_(&platformWorld),
+          commandBufferRegistry_(&commandBufferRegistry) {};
         
 
         /**
@@ -542,8 +522,10 @@ export namespace helios::glfw {
             pollEvents(updateContext);
             const bool isContextAvailable = createWindows(updateContext);
 
-            if (!openGLLoaded_ && isContextAvailable) {
-                openGLLoaded_ = initOpenGL(updateContext);
+            if (!renderPlatform_.isInitialized() && isContextAvailable) {
+                if (renderPlatform_.init()) {
+                    updateContext.runtimeEnvironment().setGPUReady();
+                }
             }
 
             resizeWindows(updateContext);
@@ -645,7 +627,7 @@ export namespace helios::glfw {
         /**
          * @brief Registers this manager as handler for supported platform/window commands.
          *
-         * @param gameWorld Runtime world used for command-handler registration.
+         * @param commandHandlerRegistry Registry used for command-handler registration.
          */
         void init(CommandHandlerRegistry& commandHandlerRegistry) noexcept {
 
@@ -663,4 +645,3 @@ export namespace helios::glfw {
 
 
 }
-
