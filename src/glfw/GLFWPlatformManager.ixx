@@ -23,7 +23,7 @@ import helios.engine.runtime.enginestate.types;
 
 import helios.engine.spatial.components;
 
-import helios.engine.rendering.framebuffer;
+import helios.engine.rendering.renderTarget;
 
 import helios.engine.runtime.messaging.command.concepts.IsPlatformCommandBuffer;
 import helios.engine.runtime.messaging.command.CommandHandlerRegistry;
@@ -54,8 +54,8 @@ import helios.engine.runtime.concepts;
 import helios.engine.runtime.messaging.command;
 import helios.engine.platform.window.concepts.IsWindowHandle;
 
-using namespace helios::engine::rendering::framebuffer::types;
-using namespace helios::engine::rendering::framebuffer::components;
+using namespace helios::engine::rendering::renderTarget::types;
+using namespace helios::engine::rendering::renderTarget::components;
 using namespace helios::engine::spatial::components;
 using namespace helios::engine::runtime::world::tags;
 using namespace helios::engine::platform::environment::commands;
@@ -217,19 +217,19 @@ export namespace helios::glfw {
             installResizeListener(cmd.windowHandle);
 
 
-            int framebufferWidth = 0;
-            int framebufferHeight = 0;
+            int renderTargetWidth = 0;
+            int renderTargetHeight = 0;
             int windowWidth = 0;
             int windowHeight = 0;
 
-            glfwGetFramebufferSize(nativeHandle, &framebufferWidth, &framebufferHeight);
+            glfwGetFramebufferSize(nativeHandle, &renderTargetWidth, &renderTargetHeight);
             glfwGetWindowSize(nativeHandle, &windowWidth, &windowHeight);
 
             commandBufferRegistry_->template item<TPlatformCommandBuffer>()
                                   ->template add<WindowResizeCommand<THandle>>(
                                     cmd.windowHandle,
                                     WindowSize(windowWidth, windowHeight),
-                                    FramebufferSize(framebufferWidth, framebufferHeight));
+                                    RenderTargetSize(renderTargetWidth, renderTargetHeight));
 
             return true;
         }
@@ -254,7 +254,7 @@ export namespace helios::glfw {
         }
 
         /**
-         * @brief Installs GLFW user-pointer data and framebuffer resize callback for a window.
+         * @brief Installs GLFW user-pointer data and renderTarget resize callback for a window.
          *
          * @param handle Window handle for which the listener is installed.
          */
@@ -298,7 +298,7 @@ export namespace helios::glfw {
                     ptr->platformCommandBuffer->template add<WindowResizeCommand<THandle>>(
                         ptr->windowHandle,
                         WindowSize(windowWidth, windowHeight),
-                        FramebufferSize(width, height)
+                        RenderTargetSize(width, height)
                     );
                 }
             });
@@ -362,8 +362,8 @@ export namespace helios::glfw {
          * @brief Applies queued resize commands to window components.
          *
          * @details Applies queued resize commands to window components.
-         * This will also affect the underlying framebuffers, for as long
-         * as the specific windows are bound to a framebuffer.
+         * This will also affect the underlying renderTargets, for as long
+         * as the specific windows are bound to a renderTarget.
          *
          * @param updateContext Frame-local update context.
          */
@@ -373,7 +373,7 @@ export namespace helios::glfw {
                 return;
             }
 
-            for (const auto& [windowHandle, windowSize, framebufferSize]: pendingResizeCommands_) {
+            for (const auto& [windowHandle, windowSize, renderTargetSize]: pendingResizeCommands_) {
 
                 if (!windowHandle.isValid()) {
                     continue;
@@ -384,13 +384,13 @@ export namespace helios::glfw {
                     if (auto* wsc = entity->template get<Size2DComponent<THandle>>()) {
                         wsc->setValue(windowSize);
                     }
-                    if (auto* fbc =  entity->template get<FramebufferBindingComponent<THandle>>()) {
-                        auto framebufferHandle = fbc->targetHandle();
-                        auto framebuffer = updateContext.find<FramebufferHandle>(framebufferHandle);
-                        auto fsc = framebuffer->template get<Size2DComponent<FramebufferHandle>>();
+                    if (auto* fbc =  entity->template get<RenderTargetBindingComponent<THandle>>()) {
+                        auto renderTargetHandle = fbc->targetHandle();
+                        auto renderTarget = updateContext.find<RenderTargetHandle>(renderTargetHandle);
+                        auto fsc = renderTarget->template get<Size2DComponent<RenderTargetHandle>>();
 
-                        logger_.info("Setting framebuffer size to {0},{1}", framebufferSize[0], framebufferSize[1]);
-                        fsc->setValue(framebufferSize);
+                        logger_.info("Setting renderTarget size to {0},{1}", renderTargetSize[0], renderTargetSize[1]);
+                        fsc->setValue(renderTargetSize);
                     }
                 }
 
