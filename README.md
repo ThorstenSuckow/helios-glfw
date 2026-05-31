@@ -1,28 +1,55 @@
-# helios::engine::platform::glfw
+# helios::glfw
 
-GLFW-backed platform integration.
+GLFW platform integration for the helios engine modules.
 
 ## Overview
 
-This module provides the concrete GLFW implementation used by the platform
-layer, including a manager plus GLFW-specific bridge components/types/systems.
+`helios::glfw` provides a concrete GLFW-backed implementation for platform
+initialization, native window lifecycle, resize propagation, buffer swapping,
+and close-request handling.
 
-## Key Types
+## Features
 
-| Type | Purpose |
-|------|---------|
-| `GLFWPlatformManager<THandle>` | Concrete manager handling GLFW init/window/event integration |
+- GLFW runtime initialization and shutdown handling
+- Native window creation from engine window commands
+- Framebuffer/window resize propagation
+- Buffer swap command processing
+- Typed GLFW callback user-pointer bridge
+- Window-close polling system
 
-## Subdirectories
+## Module surface
 
-| Directory | Purpose |
-|-----------|---------|
-| `components/` | GLFW-native handles and user pointer bridge components |
-| `systems/` | GLFW-specific window-close integration systems |
-| `types/` | GLFW wrapper value types |
+| Area | Public modules / APIs |
+|------|------------------------|
+| Platform manager | `GLFWPlatformManager` |
+| Components | `GLFWWindowHandleComponent`, `GLFWWindowUserPointerComponent` |
+| Systems | `GLFWWindowCloseSystem` |
+| Types | `helios.glfw.types` |
+| Aggregator | `helios.glfw` |
 
+## Usage
 
-## CMake package usage
+### C++ module
+
+```cpp
+import helios.glfw;
+```
+
+### Platform architecture
+
+`GLFWPlatformManager<TRenderPlatform, THandle, TStateCommandBuffer, TPlatformCommandBuffer>`
+receives platform/window commands, stores pending work, and applies it in
+`flush(UpdateContext&)`.
+
+GLFW-native data is attached to window entities through ECS components:
+
+- `GLFWWindowHandleComponent<THandle>` stores the native `GLFWwindow*`
+- `GLFWWindowUserPointerComponent<THandle, TPlatformCommandBuffer>` stores typed callback payload
+
+`GLFWWindowCloseSystem<THandle, TCommandBuffer>` scans shown active windows and
+queues `WindowCloseCommand<THandle>` when GLFW reports a close request.
+
+### CMake
 
 Build and install:
 
@@ -40,10 +67,25 @@ find_package(helios-glfw CONFIG REQUIRED)
 target_link_libraries(your_target PRIVATE helios::glfw)
 ```
 
+Configure a consumer against an installed prefix:
 
----
-<details>
-<summary>Doxygen</summary><p>
-@namespace helios::engine::platform::glfw
-@brief GLFW-backed platform integration.
-</p></details>
+```bash
+cmake -S . -B build -DCMAKE_PREFIX_PATH="/path/to/helios-prefix"
+cmake --build build
+```
+
+## Development
+
+Run the regular CMake build from the repository root:
+
+```bash
+cmake -S . -B build
+cmake --build build
+```
+
+## Related repositories
+
+- [`helios-ecs`](https://github.com/thorstensuckow/helios-ecs)
+- [`helios-engine`](https://github.com/thorstensuckow/helios-engine)
+- [`helios-math`](https://github.com/thorstensuckow/helios-math)
+- [`helios-opengl`](https://github.com/thorstensuckow/helios-opengl)
