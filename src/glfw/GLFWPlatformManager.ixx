@@ -540,7 +540,7 @@ export namespace helios::glfw {
          *
          * @return `true` when the command was accepted.
          */
-        bool submit(PollEventsCommand command) noexcept {
+        bool submit(PollEventsCommand&& command) noexcept {
             pollEvents_ = true;
             return true;
         }
@@ -552,7 +552,7 @@ export namespace helios::glfw {
          *
          * @return `true` when the command was accepted.
          */
-        bool submit(PlatformInitCommand command) noexcept {
+        bool submit(PlatformInitCommand&& command) noexcept {
             assert(!initialized_ && "Application was already initialized.");
             shouldInit_ = true;
             return true;
@@ -565,7 +565,7 @@ export namespace helios::glfw {
          *
          * @return `true` when the command was queued.
          */
-        bool submit(WindowCreateCommand<THandle> command)  noexcept {
+        bool submit(WindowCreateCommand<THandle>&& command)  noexcept {
             windowCreateCommands_.push_back(std::move(command));
             return true;
         }
@@ -577,7 +577,7 @@ export namespace helios::glfw {
          *
          * @return `true` when the command was queued.
          */
-        bool submit(SwapBuffersCommand<THandle> command)  noexcept {
+        bool submit(SwapBuffersCommand<THandle>&& command)  noexcept {
             pendingBufferSwaps_.push_back(std::move(command));
             return true;
         }
@@ -589,7 +589,7 @@ export namespace helios::glfw {
          *
          * @return `true` when the command was stored.
          */
-        bool submit(WindowResizeCommand<THandle> command)  noexcept {
+        bool submit(WindowResizeCommand<THandle>&& command)  noexcept {
             const auto idx = command.windowHandle.entityId;
 
             if (pendingResizeCommands_.size() <= idx) {
@@ -607,7 +607,7 @@ export namespace helios::glfw {
          *
          * @return `true` when the command was queued.
          */
-        bool submit(WindowCloseCommand<THandle> command)  noexcept {
+        bool submit(WindowCloseCommand<THandle>&& command)  noexcept {
             pendingCloseCommands_.push_back(std::move(command));
             return true;
         }
@@ -619,7 +619,7 @@ export namespace helios::glfw {
          *
          * @return `true` when the command was accepted.
          */
-        bool submit(ShutdownCommand command)  noexcept {
+        bool submit(ShutdownCommand&& command)  noexcept {
             shouldShutdown_ = true;
             return true;
         }
