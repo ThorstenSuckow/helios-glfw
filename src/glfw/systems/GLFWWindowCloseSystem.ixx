@@ -51,7 +51,7 @@ export namespace helios::glfw::systems {
         /**
          * @brief Engine role marker used by runtime registries.
          */
-        using EngineRoleTag = SystemRole;
+        using EngineRoleTag = TypedSystemRole;
 
         /**
          * @brief Scans shown windows and queues close commands for requested closures.
