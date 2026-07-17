@@ -60,13 +60,12 @@ export namespace helios::glfw::systems {
          */
         void update(UpdateContext& updateContext, TCommandBuffer& cmdBuffer) noexcept {
 
-            for (auto [entity, wc, glfw, wsc, active]: updateContext.view<
+            for (auto [entity, wc, glfw, wsc]: updateContext.view<
                 THandle,
                 WindowComponent<THandle>,
                 GLFWWindowHandleComponent<THandle>,
-                WindowShownComponent<THandle>,
-                Active<THandle>
-                >().whereEnabled()) {
+                WindowShownComponent<THandle>
+                >().withActive().whereAllEnabled()) {
                 if (glfwWindowShouldClose(glfw->handle)) {
                     cmdBuffer.template add<WindowCloseCommand<THandle>>(
                         entity.handle()
