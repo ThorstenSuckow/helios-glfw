@@ -391,6 +391,8 @@ export namespace helios::glfw {
 
                         logger_.info("Setting renderTarget size to {0},{1}", renderTargetSize[0], renderTargetSize[1]);
                         fsc->setValue(renderTargetSize);
+
+                        entity->template markDirty<Size2DComponent<RenderTargetHandle>>();
                     }
                 }
 
