@@ -65,7 +65,7 @@ export namespace helios::glfw::systems {
                 WindowComponent<THandle>,
                 GLFWWindowHandleComponent<THandle>,
                 WindowShownComponent<THandle>
-                >().withActive().whereAllEnabled()) {
+                >().withActive()) {
                 if (glfwWindowShouldClose(glfw->handle)) {
                     cmdBuffer.template add<WindowCloseCommand<THandle>>(
                         entity.handle()
