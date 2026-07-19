@@ -390,9 +390,7 @@ export namespace helios::glfw {
                         auto fsc = renderTarget->template get<Size2DComponent<RenderTargetHandle>>();
 
                         logger_.info("Setting renderTarget size to {0},{1}", renderTargetSize[0], renderTargetSize[1]);
-                        fsc->setValue(renderTargetSize);
-
-                        entity->template markDirty<Size2DComponent<RenderTargetHandle>>();
+                        entity->setTrackedValue(fsc, renderTargetSize);
                     }
                 }
 
