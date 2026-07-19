@@ -197,7 +197,7 @@ export namespace helios::glfw {
                 cfg.aspectRatioNumer,
                 cfg.aspectRatioDenom
             );
-            window->template add<
+            window->template trackDirty<
                 Size2DComponent<THandle>
             >(WindowSize(cfg.size));
             window->template add<GLFWWindowHandleComponent<THandle>>(nativeHandle);
@@ -382,7 +382,7 @@ export namespace helios::glfw {
                 if (auto entity = updateContext.find(windowHandle)) {
 
                     if (auto* wsc = entity->template get<Size2DComponent<THandle>>()) {
-                        wsc->setValue(windowSize);
+                        entity->setTrackedValue(wsc, windowSize);
                     }
                     if (auto* fbc =  entity->template get<RenderTargetBindingComponent<THandle>>()) {
                         auto renderTargetHandle = fbc->targetHandle();
@@ -390,7 +390,7 @@ export namespace helios::glfw {
                         auto fsc = renderTarget->template get<Size2DComponent<RenderTargetHandle>>();
 
                         logger_.info("Setting renderTarget size to {0},{1}", renderTargetSize[0], renderTargetSize[1]);
-                        entity->setTrackedValue(fsc, renderTargetSize);
+                        renderTarget->setTrackedValue(fsc, renderTargetSize);
                     }
                 }
 
