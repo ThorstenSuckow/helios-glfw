@@ -205,7 +205,7 @@ export namespace helios::glfw {
             removeCurrentContext(updateContext);
 
             glfwMakeContextCurrent(nativeHandle);
-
+            glfwSwapInterval(cfg.vsyncEnabled ? 1 : 0);
             window->template add<CurrentContextComponent<THandle>>();
 
             window->template add<WindowShownComponent<THandle>>();
