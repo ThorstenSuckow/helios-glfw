@@ -47,8 +47,7 @@ import helios.engine.platform.window.types;
 import helios.glfw.components;
 import helios.glfw.types;
 
-import helios.engine.rendering.common.concepts.CanProvideWindowHints;
-import helios.engine.rendering.common.concepts.CanInitializeRenderBackend;
+import helios.engine.rendering.common.concepts;
 
 import helios.engine.runtime.concepts;
 import helios.engine.runtime.messaging.command;
