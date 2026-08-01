@@ -589,7 +589,7 @@ export namespace helios::glfw {
          * @return `true` when the command was stored.
          */
         bool submit(WindowResizeCommand<THandle>&& command)  noexcept {
-            const auto idx = command.windowHandle.entityId;
+            const auto idx = command.windowHandle.entityId();
 
             if (pendingResizeCommands_.size() <= idx) {
                 pendingResizeCommands_.resize(idx + 1);
