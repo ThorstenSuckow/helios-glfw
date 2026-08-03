@@ -142,6 +142,9 @@ export namespace helios::glfw {
             assert(updateContext.session().state<EngineState>() == EngineState::Booting &&
                 "Expected EngineState to be Booting during platform initialization");
 
+            /**
+             * @todo should be commands, session should not be mutable from shared UpdateContext
+             */
             initialized_ = updateContext.session().initialize() &&
                            updateContext.runtimeEnvironment().initialize();
             
