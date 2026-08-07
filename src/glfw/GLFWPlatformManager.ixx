@@ -25,7 +25,6 @@ import helios.engine.spatial.components;
 
 import helios.engine.rendering.renderTarget;
 
-import helios.engine.runtime.messaging.command.concepts.IsPlatformCommandBuffer;
 import helios.engine.runtime.messaging.command.CommandHandlerRegistry;
 import helios.engine.runtime.messaging.command.CommandBufferRegistry;
 
@@ -92,7 +91,6 @@ export namespace helios::glfw {
     template<typename TRenderPlatform, typename THandle, typename TStateCommandBuffer = NullCommandBuffer, typename TPlatformCommandBuffer = NullCommandBuffer>
     requires IsWindowHandle<THandle>
             && IsCommandBufferLike<TStateCommandBuffer>
-            && IsPlatformCommandBuffer<TPlatformCommandBuffer>
             && CanInitializeRenderBackend<TRenderPlatform>
             && CanProvideWindowHints<TRenderPlatform>
     class GLFWPlatformManager {

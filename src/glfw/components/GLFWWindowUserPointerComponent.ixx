@@ -11,12 +11,10 @@ export module helios.glfw.components.GLFWWindowUserPointerComponent;
 import helios.engine.runtime.world.GameWorld;
 import helios.glfw.types.GLFWWindowUserPointer;
 import helios.engine.platform.window.concepts.IsWindowHandle;
-import helios.engine.runtime.messaging.command.concepts.IsPlatformCommandBuffer;
 
 using namespace helios::engine::runtime::world;
 using namespace helios::engine::platform::window::concepts;
 using namespace helios::glfw::types;
-using namespace helios::engine::runtime::messaging::command::concepts;
 export namespace helios::glfw::components {
 
 
@@ -26,7 +24,7 @@ export namespace helios::glfw::components {
      * @tparam THandle Window handle type.
      */
     template<typename THandle, typename TPlatformCommandBuffer>
-    requires IsWindowHandle<THandle> && IsPlatformCommandBuffer<TPlatformCommandBuffer>
+    requires IsWindowHandle<THandle>
     struct GLFWWindowUserPointerComponent {
         /** @brief Typed payload exposed to GLFW callbacks via `glfwSetWindowUserPointer`. */
         GLFWWindowUserPointer<THandle, TPlatformCommandBuffer> userPointer;
