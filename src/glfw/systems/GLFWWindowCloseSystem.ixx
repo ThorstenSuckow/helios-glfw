@@ -17,16 +17,13 @@ import helios.engine.runtime.world.tags.SystemRole;
 import helios.glfw.components;
 import helios.engine.platform.window.components;
 import helios.engine.platform.window.commands.WindowCloseCommand;
-import helios.engine.runtime.messaging.command.NullCommandBuffer;
-import helios.engine.runtime.messaging.command.concepts.IsCommandBufferLike;
-
-import helios.ecs.components.Active;
+import helios.ecs;
 import helios.engine.platform.window.concepts.IsWindowHandle;
 
 using namespace helios::engine::runtime::world::tags;
 using namespace helios::engine::runtime::world;
-using namespace helios::engine::runtime::messaging::command;
-using namespace helios::engine::runtime::messaging::command::concepts;
+using namespace helios::ecs;
+using namespace helios::ecs::common::concepts;
 using namespace helios::glfw::components;
 using namespace helios::engine::platform::window::commands;
 using namespace helios::engine::platform::window::components;
@@ -39,8 +36,8 @@ export namespace helios::glfw::systems {
      *
      * @tparam THandle Window handle type.
      */
-    template<typename THandle, typename TCommandBuffer = NullCommandBuffer>
-    requires IsWindowHandle<THandle> && IsCommandBufferLike<TCommandBuffer>
+    template<typename THandle, typename TCommandBuffer = ecs::command::NullCommandBuffer>
+    requires IsWindowHandle<THandle> && ecs::command::concepts::IsCommandBufferLike<TCommandBuffer>
     class GLFWWindowCloseSystem {
 
 
@@ -51,7 +48,7 @@ export namespace helios::glfw::systems {
         /**
          * @brief Engine role marker used by runtime registries.
          */
-        using EngineRoleTag = TypedSystemRole;
+        using EcsRoleTag = TypedSystemRole;
 
         /**
          * @brief Scans shown windows and queues close commands for requested closures.

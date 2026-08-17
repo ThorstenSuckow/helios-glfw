@@ -6,13 +6,12 @@ module;
 
 export module helios.glfw.types.GLFWWindowUserPointer;
 
-import helios.engine.runtime.world.EngineWorld;
 import helios.engine.platform.window.concepts.IsWindowHandle;
-import helios.engine.runtime.messaging.command.concepts;
+import helios.ecs.common.concepts;
 
-using namespace helios::engine::runtime::world;
+
 using namespace helios::engine::platform::window::concepts;
-using namespace helios::engine::runtime::messaging::command::concepts;
+using namespace helios::ecs::common::concepts;
 export namespace helios::glfw::types {
 
     /**
