@@ -13,44 +13,21 @@ module;
 
 export module helios.glfw.GLFWPlatformManager;
 
-import helios.engine.runtime.world.UpdateContext;
-import helios.engine.runtime.world.Session;
+import helios.core.log;
 
-import helios.engine.util.log;
-import helios.engine.core.types;
+import helios.ecs;
 
-import helios.engine.runtime.enginestate.types;
 
-import helios.engine.spatial.components;
-
-import helios.engine.rendering.renderTarget;
-
-import helios.engine.runtime.messaging.command.CommandHandlerRegistry;
-import helios.engine.runtime.messaging.command.CommandBufferRegistry;
-
-import helios.engine.state.commands;
-import helios.engine.state.types;
-
-import helios.engine.runtime.world.EngineWorld;
-import helios.engine.runtime.world.tags.ManagerRole;
-
-import helios.engine.platform.environment.commands;
-import helios.engine.platform.lifecycle.commands;
-import helios.engine.platform.environment.components;
-import helios.engine.platform.environment.types;
-
-import helios.engine.platform.window.commands;
-import helios.engine.platform.window.components;
-import helios.engine.platform.window.types;
+import helios.engine.core;
+import helios.engine.spatial;
+import helios.engine.rendering;
+import helios.engine.runtime;
+import helios.engine.state;
+import helios.engine.platform;
 
 import helios.glfw.components;
 import helios.glfw.types;
 
-import helios.engine.rendering.common.concepts;
-
-import helios.engine.runtime.concepts;
-import helios.engine.runtime.messaging.command;
-import helios.engine.platform.window.concepts.IsWindowHandle;
 
 using namespace helios::engine::rendering::renderTarget::types;
 using namespace helios::engine::rendering::renderTarget::components;
@@ -67,10 +44,10 @@ using namespace helios::glfw::components;
 using namespace helios::glfw::types;
 using namespace helios::engine::state::commands;
 using namespace helios::engine::state::types;
-using namespace helios::engine::runtime::messaging::command::concepts;
+using namespace helios::ecs::common::concepts;
 using namespace helios::engine::rendering::common::concepts;
 using namespace helios::engine::core::types;
-using namespace helios::engine::runtime::messaging::command;
+using namespace helios::ecs;
 using namespace helios::engine::runtime::world;
 using namespace helios::engine::platform::window::concepts;
 using namespace helios::engine::runtime::enginestate::types;
@@ -88,11 +65,19 @@ export namespace helios::glfw {
      * @tparam TStateCommandBuffer Command buffer used for follow-up state commands.
      * @tparam TPlatformCommandBuffer Command buffer used by GLFW callbacks for platform commands.
      */
-    template<typename TRenderPlatform, typename THandle, typename TStateCommandBuffer = NullCommandBuffer, typename TPlatformCommandBuffer = NullCommandBuffer>
+    template<
+        typename TRenderPlatform,
+        typename THandle,
+        typename TInitContext,
+        typename TExecutionContext,
+        typename TStateCommandBuffer = helios::ecs::command::NullCommandBuffer,
+        typename TPlatformCommandBuffer = helios::ecs::command::NullCommandBuffer>
     requires IsWindowHandle<THandle>
-            && IsCommandBufferLike<TStateCommandBuffer>
+            && ecs::command::concepts::IsCommandBufferLike<TStateCommandBuffer>
             && CanInitializeRenderBackend<TRenderPlatform>
             && CanProvideWindowHints<TRenderPlatform>
+            && engine::runtime::world::concepts::ProvidesUpdateContext<TExecutionContext, engine::runtime::world::UpdateContext>
+            && ecs::common::concepts::ProvidesCommandHandlerRegistry<TInitContext, ecs::command::CommandHandlerRegistry>
     class GLFWPlatformManager {
 
         std::vector<WindowResizeCommand<THandle>> pendingResizeCommands_;
@@ -115,10 +100,16 @@ export namespace helios::glfw {
 
         TRenderPlatform& renderPlatform_;
 
-        inline static const helios::engine::util::log::Logger& logger_ = helios::engine::util::log::LogManager::loggerForScope(
+        inline static const helios::core::log::Logger& logger_ = helios::core::log::LogManager::loggerForScope(
                    HELIOS_LOG_SCOPE);
 
-        PlatformWorld* platformWorld_;
+        ecs::EntitySpace* entitySpace_;
+
+        ecs::command::CommandBufferRegistry commandBufferRegistry_;
+
+        TStateCommandBuffer* stateCommandBuffer_{};
+        TPlatformCommandBuffer* platformCommandBuffer_{};
+
 
         /**
          * @brief Initializes GLFW and transitions runtime/session from booting to boot request.
@@ -211,7 +202,7 @@ export namespace helios::glfw {
             window->template add<WindowShownComponent<THandle>>();
             window->template add<GLFWWindowUserPointerComponent<THandle, TPlatformCommandBuffer>>(
                 GLFWWindowUserPointer<THandle, TPlatformCommandBuffer>(
-                    cmd.windowHandle, commandBufferRegistry_->template item<TPlatformCommandBuffer>()
+                    cmd.windowHandle, platformCommandBuffer_
             ));
 
             installResizeListener(cmd.windowHandle);
@@ -225,11 +216,10 @@ export namespace helios::glfw {
             glfwGetFramebufferSize(nativeHandle, &renderTargetWidth, &renderTargetHeight);
             glfwGetWindowSize(nativeHandle, &windowWidth, &windowHeight);
 
-            commandBufferRegistry_->template item<TPlatformCommandBuffer>()
-                                  ->template add<WindowResizeCommand<THandle>>(
-                                    cmd.windowHandle,
-                                    WindowSize(windowWidth, windowHeight),
-                                    RenderTargetSize(renderTargetWidth, renderTargetHeight));
+            platformCommandBuffer_->template add<WindowResizeCommand<THandle>>(
+                cmd.windowHandle,
+                WindowSize(windowWidth, windowHeight),
+                RenderTargetSize(renderTargetWidth, renderTargetHeight));
 
             return true;
         }
@@ -260,7 +250,7 @@ export namespace helios::glfw {
          */
         void installResizeListener(THandle handle) noexcept {
 
-            auto entity = platformWorld_->findEntity<THandle>(handle);
+            auto entity = entitySpace_->findEntity<THandle>(handle);
 
             if (!entity) {
                 logger_.warn("Entity was not found");
@@ -453,7 +443,7 @@ export namespace helios::glfw {
                 }
 
                 glfwDestroyWindow(glfw->handle);
-                bool destroyed = platformWorld_->destroy<THandle>(cmd.windowHandle);
+                bool destroyed = entitySpace_->destroy<THandle>(cmd.windowHandle);
                 assert(destroyed && "Failed to destroy entity");
             }
 
@@ -470,7 +460,7 @@ export namespace helios::glfw {
 
             glfwTerminate();
 
-            commandBufferRegistry_->template item<TStateCommandBuffer>()->template add<StateCommand<EngineState>>(
+            stateCommandBuffer_->template add<StateCommand<EngineState>>(
                StateTransitionRequest<EngineState>(
                    updateContext.session().state<EngineState>(),
                    EngineStateTransitionId::ShutdownRequest
@@ -480,23 +470,31 @@ export namespace helios::glfw {
 
         }
 
-        CommandBufferRegistry* commandBufferRegistry_ = nullptr;
-        
         public:
 
 
         /**
          * @brief Engine role marker used by runtime registries.
          */
-        using EngineRoleTag = ManagerRole;
+        using EcsRoleTag = ecs::manager::tags::ManagerRole;
+        using ExecutionContextType = TExecutionContext;
+        using InitContextType = TInitContext;
 
         explicit GLFWPlatformManager(
             TRenderPlatform& renderPlatform,
-            PlatformWorld& platformWorld,
-            CommandBufferRegistry& commandBufferRegistry)
+            ecs::EntitySpace& entitySpace)
         : renderPlatform_(renderPlatform),
-          platformWorld_(&platformWorld),
-          commandBufferRegistry_(&commandBufferRegistry) {};
+          entitySpace_(&entitySpace) {
+            commandBufferRegistry_.add<TStateCommandBuffer>();
+            commandBufferRegistry_.add<TPlatformCommandBuffer>();
+
+            stateCommandBuffer_ = commandBufferRegistry_.item<TStateCommandBuffer>();
+            platformCommandBuffer_ = commandBufferRegistry_.item<TPlatformCommandBuffer>();
+        };
+
+        std::span<command::CommandBuffer*> commandBuffers() {
+            return commandBufferRegistry_.items();
+        }
         
 
         /**
@@ -504,20 +502,21 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        void flush(UpdateContext& updateContext)  noexcept {
+        bool executeCommands(TExecutionContext& executionContext)  noexcept {
+
+            auto& updateContext = executionContext.updateContext();
 
             if (shouldShutdown_) {
                 shutdown(updateContext);
-                return;
+                return true;
             }
 
             if (initPlatform(updateContext)) {
-                commandBufferRegistry_->template item<TStateCommandBuffer>()->template add<StateCommand<EngineState>>(
+                stateCommandBuffer_->template add<StateCommand<EngineState>>(
                 StateTransitionRequest<EngineState>(
-                    updateContext.session().state<EngineState>(),
+                    updateContext.session().template state<EngineState>(),
                     EngineStateTransitionId::BootRequest
-                )
-            );
+                ));
             }
             pollEvents(updateContext);
             const bool isContextAvailable = createWindows(updateContext);
@@ -531,6 +530,8 @@ export namespace helios::glfw {
             resizeWindows(updateContext);
             closeWindows(updateContext);
             swapBuffers(updateContext);
+
+            return true;
         }
 
         /**
@@ -629,9 +630,11 @@ export namespace helios::glfw {
          *
          * @param commandHandlerRegistry Registry used for command-handler registration.
          */
-        void init(CommandHandlerRegistry& commandHandlerRegistry) noexcept {
+        bool init(TInitContext& intiContext) noexcept {
 
-            commandHandlerRegistry.handleCommands<
+            auto& commandHandlerRegistry = intiContext.commandHandlerRegistry();
+
+            commandHandlerRegistry.template handleCommands<
                 WindowCreateCommand<THandle>,
                 PlatformInitCommand,
                 WindowResizeCommand<THandle>,
@@ -640,8 +643,15 @@ export namespace helios::glfw {
                 WindowCloseCommand<THandle>,
                 ShutdownCommand
             >(*this);
+
+            return true;
+        }
+
+        void reset() {
+            /*intentionally noop*/
         }
     };
+
 
 
 }
