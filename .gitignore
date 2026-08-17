@@ -4,3 +4,4 @@
 /build-test-ninja-noscan/
 /build-consistent/
 /.idea
+/cmake-build-release/
