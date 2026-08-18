@@ -11,8 +11,10 @@ export module helios.glfw.systems.GLFWWindowCloseSystem;
 
 
 import helios.engine.runtime.world.UpdateContext;
+import helios.engine.runtime.world.types;
+import helios.engine.runtime.concepts;
 
-import helios.engine.runtime.world.tags.SystemRole;
+import helios.ecs.system.tags;
 
 import helios.glfw.components;
 import helios.engine.platform.window.components;
@@ -20,7 +22,7 @@ import helios.engine.platform.window.commands.WindowCloseCommand;
 import helios.ecs;
 import helios.engine.platform.window.concepts.IsWindowHandle;
 
-using namespace helios::engine::runtime::world::tags;
+
 using namespace helios::engine::runtime::world;
 using namespace helios::ecs;
 using namespace helios::ecs::common::concepts;
@@ -35,29 +37,37 @@ export namespace helios::glfw::systems {
      * @brief Emits `WindowCloseCommand` when GLFW reports a close request.
      *
      * @tparam THandle Window handle type.
+     * @tparam TUpdateContextType Type of the UpdateContext to use.
      */
-    template<typename THandle, typename TCommandBuffer = ecs::command::NullCommandBuffer>
-    requires IsWindowHandle<THandle> && ecs::command::concepts::IsCommandBufferLike<TCommandBuffer>
+    template<typename THandle,
+             typename TCommandBuffer = ecs::command::NullCommandBuffer,
+             typename TUpdateContextType = engine::runtime::world::types::SystemUpdateContext>
+    requires IsWindowHandle<THandle> &&
+             ecs::command::concepts::IsCommandBufferLike<TCommandBuffer> &&
+             engine::runtime::concepts::ProvidesUpdateContext<TUpdateContextType, UpdateContext>
     class GLFWWindowCloseSystem {
 
 
     public:
 
         using CommandBuffer_type = TCommandBuffer;
+        using UpdateContextType = TUpdateContextType;
 
         /**
          * @brief Engine role marker used by runtime registries.
          */
-        using EcsRoleTag = TypedSystemRole;
+        using EcsRoleTag = ecs::system::tags::TypedSystemRole;
 
         /**
          * @brief Scans shown windows and queues close commands for requested closures.
          *
-         * @param updateContext Frame-local update context.
+         * @param updateCtx Frame-local update context.
          */
-        void update(UpdateContext& updateContext, TCommandBuffer& cmdBuffer) noexcept {
+        bool update(TUpdateContextType& updateCtx, TCommandBuffer& cmdBuffer) noexcept {
 
-            for (auto [entity, wc, glfw, wsc]: updateContext.view<
+            auto& updateContext = updateCtx.updateContext();
+
+            for (auto [entity, wc, glfw, wsc]: updateContext.template view<
                 THandle,
                 WindowComponent<THandle>,
                 GLFWWindowHandleComponent<THandle>,
@@ -69,6 +79,7 @@ export namespace helios::glfw::systems {
                     );
                 }
             }
+            return true;
         }
 
     };
