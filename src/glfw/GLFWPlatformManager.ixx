@@ -32,7 +32,7 @@ import helios.glfw.types;
 using namespace helios::engine::rendering::renderTarget::types;
 using namespace helios::engine::rendering::renderTarget::components;
 using namespace helios::engine::spatial::components;
-using namespace helios::engine::runtime::world::tags;
+
 using namespace helios::engine::platform::environment::commands;
 using namespace helios::engine::platform::lifecycle::commands;
 using namespace helios::engine::platform::environment::types;
@@ -76,7 +76,7 @@ export namespace helios::glfw {
             && ecs::command::concepts::IsCommandBufferLike<TStateCommandBuffer>
             && CanInitializeRenderBackend<TRenderPlatform>
             && CanProvideWindowHints<TRenderPlatform>
-            && engine::runtime::world::concepts::ProvidesUpdateContext<TExecutionContext, engine::runtime::world::UpdateContext>
+            && engine::runtime::concepts::ProvidesUpdateContext<TExecutionContext, engine::runtime::world::UpdateContext>
             && ecs::common::concepts::ProvidesCommandHandlerRegistry<TInitContext, ecs::command::CommandHandlerRegistry>
     class GLFWPlatformManager {
 
