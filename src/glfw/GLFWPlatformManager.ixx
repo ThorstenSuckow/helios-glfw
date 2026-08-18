@@ -103,7 +103,7 @@ export namespace helios::glfw {
         inline static const helios::core::log::Logger& logger_ = helios::core::log::LogManager::loggerForScope(
                    HELIOS_LOG_SCOPE);
 
-        ecs::EntitySpace* entitySpace_;
+        ecs::EcsWorld* ecsWorld_;
 
         ecs::command::CommandBufferRegistry commandBufferRegistry_;
 
@@ -250,7 +250,7 @@ export namespace helios::glfw {
          */
         void installResizeListener(THandle handle) noexcept {
 
-            auto entity = entitySpace_->findEntity<THandle>(handle);
+            auto entity = ecsWorld_->find<THandle>(handle);
 
             if (!entity) {
                 logger_.warn("Entity was not found");
@@ -443,7 +443,7 @@ export namespace helios::glfw {
                 }
 
                 glfwDestroyWindow(glfw->handle);
-                bool destroyed = entitySpace_->destroy<THandle>(cmd.windowHandle);
+                bool destroyed = ecsWorld_->destroy<THandle>(cmd.windowHandle);
                 assert(destroyed && "Failed to destroy entity");
             }
 
@@ -482,9 +482,9 @@ export namespace helios::glfw {
 
         explicit GLFWPlatformManager(
             TRenderPlatform& renderPlatform,
-            ecs::EntitySpace& entitySpace)
+            ecs::EcsWorld& ecsWorld)
         : renderPlatform_(renderPlatform),
-          entitySpace_(&entitySpace) {
+          ecsWorld_(&ecsWorld) {
             commandBufferRegistry_.add<TStateCommandBuffer>();
             commandBufferRegistry_.add<TPlatformCommandBuffer>();
 
