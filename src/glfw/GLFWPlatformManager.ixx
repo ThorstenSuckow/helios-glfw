@@ -62,18 +62,17 @@ export namespace helios::glfw {
      * as pending work, and processes them in `flush(...)` in a deterministic order.
      *
      * @tparam THandle Window/entity handle type.
-     * @tparam TStateCommandBuffer Command buffer used for follow-up state commands.
-     * @tparam TPlatformCommandBuffer Command buffer used by GLFW callbacks for platform commands.
+     * @tparam TCommandBuffer Command buffer used for follow-up state commands.
+     * @tparam TCommandBuffer Command buffer used by GLFW callbacks for platform commands.
      */
     template<
         typename TRenderPlatform,
         typename THandle,
         typename TInitContext,
         typename TExecutionContext,
-        typename TStateCommandBuffer = helios::ecs::command::NullCommandBuffer,
-        typename TPlatformCommandBuffer = helios::ecs::command::NullCommandBuffer>
+        typename TCommandBuffer = helios::ecs::command::NullCommandBuffer>
     requires IsWindowHandle<THandle>
-            && ecs::command::concepts::IsCommandBufferLike<TStateCommandBuffer>
+            && ecs::command::concepts::IsCommandBufferLike<TCommandBuffer>
             && CanInitializeRenderBackend<TRenderPlatform>
             && CanProvideWindowHints<TRenderPlatform>
             && engine::runtime::concepts::ProvidesUpdateContext<TExecutionContext, engine::runtime::world::UpdateContext>
@@ -107,9 +106,9 @@ export namespace helios::glfw {
 
         ecs::command::CommandBufferRegistry commandBufferRegistry_;
 
-        TStateCommandBuffer* stateCommandBuffer_{};
-        TPlatformCommandBuffer* platformCommandBuffer_{};
+        ecs::command::CommandBuffer commandBufferWrapper_{};
 
+        TCommandBuffer* commandBuffer_{};
 
         /**
          * @brief Initializes GLFW and transitions runtime/session from booting to boot request.
@@ -200,9 +199,9 @@ export namespace helios::glfw {
             window->template add<CurrentContextComponent<THandle>>();
 
             window->template add<WindowShownComponent<THandle>>();
-            window->template add<GLFWWindowUserPointerComponent<THandle, TPlatformCommandBuffer>>(
-                GLFWWindowUserPointer<THandle, TPlatformCommandBuffer>(
-                    cmd.windowHandle, platformCommandBuffer_
+            window->template add<GLFWWindowUserPointerComponent<THandle, TCommandBuffer>>(
+                GLFWWindowUserPointer<THandle, TCommandBuffer>(
+                    cmd.windowHandle, commandBuffer_
             ));
 
             installResizeListener(cmd.windowHandle);
@@ -216,7 +215,7 @@ export namespace helios::glfw {
             glfwGetFramebufferSize(nativeHandle, &renderTargetWidth, &renderTargetHeight);
             glfwGetWindowSize(nativeHandle, &windowWidth, &windowHeight);
 
-            platformCommandBuffer_->template add<WindowResizeCommand<THandle>>(
+            commandBuffer_->template add<WindowResizeCommand<THandle>>(
                 cmd.windowHandle,
                 WindowSize(windowWidth, windowHeight),
                 RenderTargetSize(renderTargetWidth, renderTargetHeight));
@@ -264,7 +263,7 @@ export namespace helios::glfw {
                 return;
             }
 
-            auto* wuptrComponent = entity->template get<GLFWWindowUserPointerComponent<THandle, TPlatformCommandBuffer>>();
+            auto* wuptrComponent = entity->template get<GLFWWindowUserPointerComponent<THandle, TCommandBuffer>>();
             if (!wuptrComponent) {
                 logger_.error("Entity does not have GLFWWindowUserPointerComponent");
                 assert(false && "Entity does not have GLFWWindowUserPointerComponent");
@@ -277,15 +276,15 @@ export namespace helios::glfw {
             glfwSetFramebufferSizeCallback(
                 glfw->handle,
                 [] (GLFWwindow* nativeHandle, const int width, const int height) {
-                const auto* ptr = static_cast<GLFWWindowUserPointer<THandle, TPlatformCommandBuffer>*>(glfwGetWindowUserPointer(nativeHandle));
+                const auto* ptr = static_cast<GLFWWindowUserPointer<THandle, TCommandBuffer>*>(glfwGetWindowUserPointer(nativeHandle));
 
-                if (ptr && ptr->platformCommandBuffer) {
+                if (ptr && ptr->commandBuffer) {
 
                     int windowWidth = 0;
                     int windowHeight = 0;
 
                     glfwGetWindowSize(nativeHandle, &windowWidth, &windowHeight);
-                    ptr->platformCommandBuffer->template add<WindowResizeCommand<THandle>>(
+                    ptr->commandBuffer->template add<WindowResizeCommand<THandle>>(
                         ptr->windowHandle,
                         WindowSize(windowWidth, windowHeight),
                         RenderTargetSize(width, height)
@@ -460,7 +459,7 @@ export namespace helios::glfw {
 
             glfwTerminate();
 
-            stateCommandBuffer_->template add<StateCommand<EngineState>>(
+            commandBuffer_->template add<StateCommand<EngineState>>(
                StateTransitionRequest<EngineState>(
                    updateContext.session().state<EngineState>(),
                    EngineStateTransitionId::ShutdownRequest
@@ -484,16 +483,13 @@ export namespace helios::glfw {
             TRenderPlatform& renderPlatform,
             ecs::EcsWorld& ecsWorld)
         : renderPlatform_(renderPlatform),
-          ecsWorld_(&ecsWorld) {
-            commandBufferRegistry_.add<TStateCommandBuffer>();
-            commandBufferRegistry_.add<TPlatformCommandBuffer>();
-
-            stateCommandBuffer_ = commandBufferRegistry_.item<TStateCommandBuffer>();
-            platformCommandBuffer_ = commandBufferRegistry_.item<TPlatformCommandBuffer>();
+          ecsWorld_(&ecsWorld),
+        commandBufferWrapper_(ecs::command::CommandBuffer(TCommandBuffer{})){
+            commandBuffer_ = commandBufferWrapper_.tryGet<TCommandBuffer>();
         };
 
-        std::span<command::CommandBuffer*> commandBuffers() {
-            return commandBufferRegistry_.items();
+        command::CommandBuffer* commandBuffer() {
+            return &commandBufferWrapper_;
         }
         
 
@@ -512,7 +508,7 @@ export namespace helios::glfw {
             }
 
             if (initPlatform(updateContext)) {
-                stateCommandBuffer_->template add<StateCommand<EngineState>>(
+                commandBuffer_->template add<StateCommand<EngineState>>(
                 StateTransitionRequest<EngineState>(
                     updateContext.session().template state<EngineState>(),
                     EngineStateTransitionId::BootRequest
@@ -630,9 +626,9 @@ export namespace helios::glfw {
          *
          * @param commandHandlerRegistry Registry used for command-handler registration.
          */
-        bool init(TInitContext& intiContext) noexcept {
+        bool init(TInitContext& initContext) noexcept {
 
-            auto& commandHandlerRegistry = intiContext.commandHandlerRegistry();
+            auto& commandHandlerRegistry = initContext.commandHandlerRegistry();
 
             commandHandlerRegistry.template handleCommands<
                 WindowCreateCommand<THandle>,
