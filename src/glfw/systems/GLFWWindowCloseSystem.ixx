@@ -37,21 +37,11 @@ export namespace helios::glfw::systems {
      * @brief Emits `WindowCloseCommand` when GLFW reports a close request.
      *
      * @tparam THandle Window handle type.
-     * @tparam TUpdateContextType Type of the UpdateContext to use.
      */
-    template<typename THandle,
-             typename TCommandBuffer = ecs::command::NullCommandBuffer,
-             typename TUpdateContextType = engine::runtime::world::types::SystemUpdateContext>
-    requires IsWindowHandle<THandle> &&
-             ecs::command::concepts::IsCommandBufferLike<TCommandBuffer> &&
-             engine::runtime::concepts::ProvidesUpdateContext<TUpdateContextType, UpdateContext>
+    template<typename THandle>
     class GLFWWindowCloseSystem {
-
-
     public:
 
-        using CommandBuffer_type = TCommandBuffer;
-        using UpdateContextType = TUpdateContextType;
 
         /**
          * @brief Engine role marker used by runtime registries.
@@ -63,6 +53,9 @@ export namespace helios::glfw::systems {
          *
          * @param updateCtx Frame-local update context.
          */
+        template<typename TUpdateContextType, typename TCommandBuffer>
+        requires ecs::command::concepts::IsCommandBufferLike<TCommandBuffer> &&
+            engine::runtime::concepts::ProvidesUpdateContext<TUpdateContextType, UpdateContext>
         bool update(TUpdateContextType& updateCtx, TCommandBuffer& cmdBuffer) noexcept {
 
             auto& updateContext = updateCtx.updateContext();
