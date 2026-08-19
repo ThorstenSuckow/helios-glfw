@@ -19,14 +19,14 @@ export namespace helios::glfw::types {
      *
      * @tparam THandle Window handle type.
      */
-    template<typename THandle, typename TPlatformCommandBuffer>
+    template<typename THandle, typename TCommandBuffer>
     requires IsWindowHandle<THandle>
     struct GLFWWindowUserPointer {
         /** @brief Window entity handle associated with the native window. */
         THandle windowHandle;
 
         /** @brief Runtime platform world used by callbacks to enqueue or mutate state. */
-        TPlatformCommandBuffer* platformCommandBuffer = nullptr;
+        TCommandBuffer* commandBuffer = nullptr;
     };
 
 }

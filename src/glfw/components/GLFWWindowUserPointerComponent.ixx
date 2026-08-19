@@ -23,11 +23,10 @@ export namespace helios::glfw::components {
      *
      * @tparam THandle Window handle type.
      */
-    template<typename THandle, typename TPlatformCommandBuffer>
-    requires IsWindowHandle<THandle>
+    template<typename THandle, typename TCommandBuffer>
     struct GLFWWindowUserPointerComponent {
         /** @brief Typed payload exposed to GLFW callbacks via `glfwSetWindowUserPointer`. */
-        GLFWWindowUserPointer<THandle, TPlatformCommandBuffer> userPointer;
+        GLFWWindowUserPointer<THandle, TCommandBuffer> userPointer;
 
     };
 
