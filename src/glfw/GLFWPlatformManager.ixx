@@ -67,16 +67,11 @@ export namespace helios::glfw {
      */
     template<
         typename TRenderPlatform,
-        typename THandle,
-        typename TInitContext,
-        typename TExecutionContext,
-        typename TCommandBuffer = helios::ecs::command::NullCommandBuffer>
+        typename THandle
+    >
     requires IsWindowHandle<THandle>
-            && ecs::command::concepts::IsCommandBufferLike<TCommandBuffer>
             && CanInitializeRenderBackend<TRenderPlatform>
             && CanProvideWindowHints<TRenderPlatform>
-            && engine::runtime::concepts::ProvidesUpdateContext<TExecutionContext, engine::runtime::world::UpdateContext>
-            && ecs::common::concepts::ProvidesCommandHandlerRegistry<TInitContext, ecs::command::CommandHandlerRegistry>
     class GLFWPlatformManager {
 
         std::vector<WindowResizeCommand<THandle>> pendingResizeCommands_;
@@ -104,11 +99,6 @@ export namespace helios::glfw {
 
         ecs::EcsWorld* ecsWorld_;
 
-        ecs::command::CommandBufferRegistry commandBufferRegistry_;
-
-        ecs::command::CommandBuffer commandBufferWrapper_{};
-
-        TCommandBuffer* commandBuffer_{};
 
         /**
          * @brief Initializes GLFW and transitions runtime/session from booting to boot request.
@@ -150,7 +140,8 @@ export namespace helios::glfw {
          *
          * @return `true` if the window was created and bound successfully; otherwise `false`.
          */
-        bool createWindow(UpdateContext& updateContext, const WindowCreateCommand<THandle>& cmd) noexcept {
+        template<typename TCommandBuffer>
+        bool createWindow(UpdateContext& updateContext, const WindowCreateCommand<THandle>& cmd, TCommandBuffer& commandBuffer) noexcept {
 
             auto window = updateContext.find(cmd.windowHandle);
 
@@ -201,10 +192,10 @@ export namespace helios::glfw {
             window->template add<WindowShownComponent<THandle>>();
             window->template add<GLFWWindowUserPointerComponent<THandle, TCommandBuffer>>(
                 GLFWWindowUserPointer<THandle, TCommandBuffer>(
-                    cmd.windowHandle, commandBuffer_
+                    cmd.windowHandle, &commandBuffer
             ));
 
-            installResizeListener(cmd.windowHandle);
+            installResizeListener(cmd.windowHandle, commandBuffer);
 
 
             int renderTargetWidth = 0;
@@ -215,7 +206,7 @@ export namespace helios::glfw {
             glfwGetFramebufferSize(nativeHandle, &renderTargetWidth, &renderTargetHeight);
             glfwGetWindowSize(nativeHandle, &windowWidth, &windowHeight);
 
-            commandBuffer_->template add<WindowResizeCommand<THandle>>(
+            commandBuffer.template add<WindowResizeCommand<THandle>>(
                 cmd.windowHandle,
                 WindowSize(windowWidth, windowHeight),
                 RenderTargetSize(renderTargetWidth, renderTargetHeight));
@@ -247,7 +238,8 @@ export namespace helios::glfw {
          *
          * @param handle Window handle for which the listener is installed.
          */
-        void installResizeListener(THandle handle) noexcept {
+        template<typename TCommandBuffer>
+        void installResizeListener(THandle handle, TCommandBuffer& commandBuffer) noexcept {
 
             auto entity = ecsWorld_->find<THandle>(handle);
 
@@ -331,12 +323,13 @@ export namespace helios::glfw {
          *
          * @return `true` if at least one window was created in this flush; otherwise `false`.
          */
-        bool createWindows(UpdateContext& updateContext) noexcept {
+        template<typename TCommandBuffer>
+        bool createWindows(UpdateContext& updateContext, TCommandBuffer& commandBuffer) noexcept {
             if (windowCreateCommands_.empty()) {
                 return false;
             }
             for (const auto& windowCreateCommand  : windowCreateCommands_) {
-                const bool isContextAvailable = createWindow(updateContext, windowCreateCommand);
+                const bool isContextAvailable = createWindow(updateContext, windowCreateCommand, commandBuffer);
                 if (!isContextAvailable) {
                     logger_.error("Failed to create window");
                     assert(false && "Failed to create window");
@@ -356,7 +349,8 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        void resizeWindows(UpdateContext& updateContext) noexcept {
+        template<typename TCommandBuffer>
+        void resizeWindows(UpdateContext& updateContext, TCommandBuffer& commandBuffer) noexcept {
 
             if (pendingResizeCommands_.empty()) {
                 return;
@@ -393,7 +387,8 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        void swapBuffers(UpdateContext& updateContext) noexcept {
+        template<typename TCommandBuffer>
+        void swapBuffers(UpdateContext& updateContext, TCommandBuffer& commandBuffer) noexcept {
             if (pendingBufferSwaps_.empty()) {
                 return;
             }
@@ -422,7 +417,8 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        void closeWindows(UpdateContext& updateContext) noexcept {
+        template<typename TCommandBuffer>
+        void closeWindows(UpdateContext& updateContext, TCommandBuffer& commandBuffer) noexcept {
             if (pendingCloseCommands_.empty()) {
                 return;
             }
@@ -455,11 +451,12 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        void shutdown(UpdateContext& updateContext) noexcept {
+        template<typename TCommandBuffer>
+        void shutdown(UpdateContext& updateContext, TCommandBuffer& commandBuffer) noexcept {
 
             glfwTerminate();
 
-            commandBuffer_->template add<StateCommand<EngineState>>(
+            commandBuffer.template add<StateCommand<EngineState>>(
                StateTransitionRequest<EngineState>(
                    updateContext.session().state<EngineState>(),
                    EngineStateTransitionId::ShutdownRequest
@@ -476,46 +473,46 @@ export namespace helios::glfw {
          * @brief Engine role marker used by runtime registries.
          */
         using EcsRoleTag = ecs::manager::tags::ManagerRole;
-        using ExecutionContextType = TExecutionContext;
-        using InitContextType = TInitContext;
+
+        using CommandTypes = ecs::command::types::CommandTypeList<
+            WindowResizeCommand<THandle>,
+            StateCommand<EngineState>
+        >;
 
         explicit GLFWPlatformManager(
             TRenderPlatform& renderPlatform,
             ecs::EcsWorld& ecsWorld)
         : renderPlatform_(renderPlatform),
-          ecsWorld_(&ecsWorld),
-        commandBufferWrapper_(ecs::command::CommandBuffer(TCommandBuffer{})){
-            commandBuffer_ = commandBufferWrapper_.tryGet<TCommandBuffer>();
-        };
+          ecsWorld_(&ecsWorld) {};
 
-        command::CommandBuffer* commandBuffer() {
-            return &commandBufferWrapper_;
-        }
-        
+
 
         /**
          * @brief Processes queued platform/window work for the current frame.
          *
          * @param updateContext Frame-local update context.
          */
-        bool executeCommands(TExecutionContext& executionContext)  noexcept {
+        template<typename TExecutionContext, typename TCommandBuffer>
+        requires engine::runtime::concepts::ProvidesUpdateContext<TExecutionContext, UpdateContext> &&
+            ecs::command::concepts::IsCommandBufferLike<TCommandBuffer>
+        bool executeCommands(TExecutionContext& executionContext, TCommandBuffer& commandBuffer)  noexcept {
 
             auto& updateContext = executionContext.updateContext();
 
             if (shouldShutdown_) {
-                shutdown(updateContext);
+                shutdown(updateContext, commandBuffer);
                 return true;
             }
 
             if (initPlatform(updateContext)) {
-                commandBuffer_->template add<StateCommand<EngineState>>(
+                commandBuffer.template add<StateCommand<EngineState>>(
                 StateTransitionRequest<EngineState>(
                     updateContext.session().template state<EngineState>(),
                     EngineStateTransitionId::BootRequest
                 ));
             }
             pollEvents(updateContext);
-            const bool isContextAvailable = createWindows(updateContext);
+            const bool isContextAvailable = createWindows(updateContext, commandBuffer);
 
             if (!renderPlatform_.isInitialized() && isContextAvailable) {
                 if (renderPlatform_.init()) {
@@ -523,9 +520,9 @@ export namespace helios::glfw {
                 }
             }
 
-            resizeWindows(updateContext);
-            closeWindows(updateContext);
-            swapBuffers(updateContext);
+            resizeWindows(updateContext, commandBuffer);
+            closeWindows(updateContext, commandBuffer);
+            swapBuffers(updateContext, commandBuffer);
 
             return true;
         }
@@ -626,6 +623,8 @@ export namespace helios::glfw {
          *
          * @param commandHandlerRegistry Registry used for command-handler registration.
          */
+        template<typename TInitContext>
+        requires ProvidesCommandHandlerRegistry<TInitContext, ecs::command::CommandHandlerRegistry>
         bool init(TInitContext& initContext) noexcept {
 
             auto& commandHandlerRegistry = initContext.commandHandlerRegistry();
