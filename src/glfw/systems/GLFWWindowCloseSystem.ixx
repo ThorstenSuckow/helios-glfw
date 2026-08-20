@@ -15,13 +15,13 @@ import helios.engine.runtime.world.types;
 import helios.engine.runtime.concepts;
 
 import helios.ecs.system.tags;
+import helios.ecs.command.types;
 
 import helios.glfw.components;
 import helios.engine.platform.window.components;
 import helios.engine.platform.window.commands.WindowCloseCommand;
 import helios.ecs;
 import helios.engine.platform.window.concepts.IsWindowHandle;
-
 
 using namespace helios::engine::runtime::world;
 using namespace helios::ecs;
@@ -47,6 +47,7 @@ export namespace helios::glfw::systems {
          * @brief Engine role marker used by runtime registries.
          */
         using EcsRoleTag = ecs::system::tags::TypedSystemRole;
+        using CommandTypes = ecs::command::types::CommandTypeList<WindowCloseCommand<THandle>>;
 
         /**
          * @brief Scans shown windows and queues close commands for requested closures.
