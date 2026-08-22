@@ -47,19 +47,14 @@ export namespace helios::glfw::systems {
          * @brief Engine role marker used by runtime registries.
          */
         using EcsRoleTag = ecs::system::tags::TypedSystemRole;
-        using CommandTypes = ecs::command::types::CommandTypeList<WindowCloseCommand<THandle>>;
+        using CommandBuffer = ecs::command::TypedCommandBuffer<WindowCloseCommand<THandle>>;
 
         /**
          * @brief Scans shown windows and queues close commands for requested closures.
          *
-         * @param updateCtx Frame-local update context.
+         * @param updateContext Frame-local update context.
          */
-        template<typename TUpdateContextType, typename TCommandBuffer>
-        requires ecs::command::concepts::IsCommandBufferLike<TCommandBuffer> &&
-            engine::runtime::concepts::ProvidesUpdateContext<TUpdateContextType, UpdateContext>
-        void update(TUpdateContextType& updateCtx, TCommandBuffer& cmdBuffer) noexcept {
-
-            auto& updateContext = updateCtx.updateContext();
+        void update(UpdateContext& updateContext, CommandBuffer& cmdBuffer) noexcept {
 
             for (auto [entity, wc, glfw, wsc]: updateContext.template view<
                 THandle,
