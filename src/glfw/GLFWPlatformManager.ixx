@@ -469,12 +469,7 @@ export namespace helios::glfw {
         public:
 
 
-        /**
-         * @brief Engine role marker used by runtime registries.
-         */
-        using EcsRoleTag = ecs::manager::tags::ManagerRole;
-
-        using CommandTypes = ecs::command::types::CommandTypeList<
+        using CommandBuffer = ecs::command::TypedCommandBuffer<
             WindowResizeCommand<THandle>,
             StateCommand<EngineState>
         >;
@@ -492,12 +487,7 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        template<typename TExecutionContext, typename TCommandBuffer>
-        requires engine::runtime::concepts::ProvidesUpdateContext<TExecutionContext, UpdateContext> &&
-            ecs::command::concepts::IsCommandBufferLike<TCommandBuffer>
-        bool executeCommands(TExecutionContext& executionContext, TCommandBuffer& commandBuffer)  noexcept {
-
-            auto& updateContext = executionContext.updateContext();
+        bool executeCommands(UpdateContext& updateContext, CommandBuffer& commandBuffer)  noexcept {
 
             if (shouldShutdown_) {
                 shutdown(updateContext, commandBuffer);
@@ -623,11 +613,7 @@ export namespace helios::glfw {
          *
          * @param commandHandlerRegistry Registry used for command-handler registration.
          */
-        template<typename TInitContext>
-        requires ProvidesCommandHandlerRegistry<TInitContext, ecs::command::CommandHandlerRegistry>
-        bool init(TInitContext& initContext) noexcept {
-
-            auto& commandHandlerRegistry = initContext.commandHandlerRegistry();
+        bool init(ecs::command::CommandHandlerRegistry& commandHandlerRegistry) noexcept {
 
             commandHandlerRegistry.template handleCommands<
                 WindowCreateCommand<THandle>,
