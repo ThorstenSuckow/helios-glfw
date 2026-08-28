@@ -58,21 +58,21 @@ export namespace helios::glfw {
     /**
      * @brief Concrete manager integrating GLFW with helios runtime/window command flow.
      *
-     * The manager receives runtime and window commands via `submit(...)`, stores them
-     * as pending work, and processes them in `flush(...)` in a deterministic order.
      *
      * @tparam THandle Window/entity handle type.
-     * @tparam TCommandBuffer Command buffer used for follow-up state commands.
-     * @tparam TCommandBuffer Command buffer used by GLFW callbacks for platform commands.
      */
-    template<
-        typename TRenderPlatform,
-        typename THandle
-    >
+    template<typename THandle>
     requires IsWindowHandle<THandle>
-            && CanInitializeRenderBackend<TRenderPlatform>
-            && CanProvideWindowHints<TRenderPlatform>
     class GLFWPlatformManager {
+
+    public:
+        using CommandBuffer = ecs::command::TypedCommandBuffer<
+            WindowResizeCommand<THandle>,
+            StateCommand<EngineState>
+        >;
+    private:
+
+        using RenderBackend = helios::engine::rendering::RenderBackend;
 
         std::vector<WindowResizeCommand<THandle>> pendingResizeCommands_;
 
@@ -92,12 +92,8 @@ export namespace helios::glfw {
 
         bool initialized_ = false;
 
-        TRenderPlatform& renderPlatform_;
-
         inline static const helios::core::log::Logger& logger_ = helios::core::log::LogManager::loggerForScope(
                    HELIOS_LOG_SCOPE);
-
-        ecs::EcsWorld* ecsWorld_;
 
 
         /**
@@ -105,7 +101,7 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        bool initPlatform(UpdateContext& updateContext) noexcept {
+        bool initPlatform(UpdateContext& updateContext, RenderBackend& renderBackend) noexcept {
 
             if (!shouldInit_ || initialized_) {
                 return false;
@@ -115,7 +111,7 @@ export namespace helios::glfw {
                 assert(false && "Failed to initialize glfw");
             }
 
-            renderPlatform_.provideWindowHints();
+            renderBackend.configureWindowCreationHints();
 
             assert(updateContext.session().state<EngineState>() == EngineState::Booting &&
                 "Expected EngineState to be Booting during platform initialization");
@@ -140,10 +136,11 @@ export namespace helios::glfw {
          *
          * @return `true` if the window was created and bound successfully; otherwise `false`.
          */
-        template<typename TCommandBuffer>
-        bool createWindow(UpdateContext& updateContext, const WindowCreateCommand<THandle>& cmd, TCommandBuffer& commandBuffer) noexcept {
+        bool createWindow(UpdateContext& updateContext, EntityManager<THandle>& entityManager, const WindowCreateCommand<THandle>& cmd, CommandBuffer& commandBuffer) noexcept {
 
-            auto window = updateContext.find(cmd.windowHandle);
+            auto window = entityManager.entity(cmd.windowHandle);
+
+            using TCommandBuffer = std::remove_cvref_t<CommandBuffer>;
 
             if (!window) {
                 return false;
@@ -183,7 +180,7 @@ export namespace helios::glfw {
             >(WindowSize(cfg.size));
             window->template add<GLFWWindowHandleComponent<THandle>>(nativeHandle);
 
-            removeCurrentContext(updateContext);
+            removeCurrentContext(updateContext, entityManager);
 
             glfwMakeContextCurrent(nativeHandle);
             glfwSwapInterval(cfg.vsyncEnabled ? 1 : 0);
@@ -195,7 +192,7 @@ export namespace helios::glfw {
                     cmd.windowHandle, &commandBuffer
             ));
 
-            installResizeListener(cmd.windowHandle, commandBuffer);
+            installResizeListener(cmd.windowHandle, entityManager, commandBuffer);
 
 
             int renderTargetWidth = 0;
@@ -219,14 +216,14 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        void removeCurrentContext(UpdateContext& updateContext) {
+        void removeCurrentContext(UpdateContext& updateContext, EntityManager<THandle>& entityManager) {
             // remove any currentcontext component
             currentContexts_.clear();
             for (auto [window, cc]: updateContext.template view<THandle, CurrentContextComponent<THandle>>()) {
                 currentContexts_.push_back(window.handle());
             }
             for (auto& handle : currentContexts_) {
-                auto go = updateContext.find<THandle> (handle);
+                auto go = entityManager.entity(handle);
                 if (go) {
                     go->template remove<CurrentContextComponent<THandle>>();
                 }
@@ -238,10 +235,11 @@ export namespace helios::glfw {
          *
          * @param handle Window handle for which the listener is installed.
          */
-        template<typename TCommandBuffer>
-        void installResizeListener(THandle handle, TCommandBuffer& commandBuffer) noexcept {
+        void installResizeListener(THandle handle, EntityManager<THandle>& entityManager, CommandBuffer& commandBuffer) noexcept {
 
-            auto entity = ecsWorld_->find<THandle>(handle);
+            auto entity = entityManager.entity(handle);
+
+            using TCommandBuffer = std::remove_cvref_t<CommandBuffer>;
 
             if (!entity) {
                 logger_.warn("Entity was not found");
@@ -292,9 +290,9 @@ export namespace helios::glfw {
          * @param updateContext Frame-local update context.
          * @param cmd Swap-buffers command.
          */
-        void swapBuffer(UpdateContext& updateContext, const SwapBuffersCommand<THandle>& cmd) noexcept {
+        void swapBuffer(UpdateContext& updateContext, EntityManager<THandle>& entityManager, const SwapBuffersCommand<THandle>& cmd) noexcept {
 
-            const auto entity = updateContext.find(cmd.windowHandle);
+            const auto entity = entityManager.entity(cmd.windowHandle);
 
             if (!entity) {
                 logger_.warn("Entity was not found");
@@ -323,13 +321,12 @@ export namespace helios::glfw {
          *
          * @return `true` if at least one window was created in this flush; otherwise `false`.
          */
-        template<typename TCommandBuffer>
-        bool createWindows(UpdateContext& updateContext, TCommandBuffer& commandBuffer) noexcept {
+        bool createWindows(UpdateContext& updateContext, EntityManager<THandle>& entityManager, CommandBuffer& commandBuffer) noexcept {
             if (windowCreateCommands_.empty()) {
                 return false;
             }
             for (const auto& windowCreateCommand  : windowCreateCommands_) {
-                const bool isContextAvailable = createWindow(updateContext, windowCreateCommand, commandBuffer);
+                const bool isContextAvailable = createWindow(updateContext, entityManager, windowCreateCommand, commandBuffer);
                 if (!isContextAvailable) {
                     logger_.error("Failed to create window");
                     assert(false && "Failed to create window");
@@ -347,10 +344,10 @@ export namespace helios::glfw {
          * This will also affect the underlying renderTargets, for as long
          * as the specific windows are bound to a renderTarget.
          *
-         * @param updateContext Frame-local update context.
          */
-        template<typename TCommandBuffer>
-        void resizeWindows(UpdateContext& updateContext, TCommandBuffer& commandBuffer) noexcept {
+        void resizeWindows(
+            EntityManager<THandle>& entityManager,
+            EntityManager<RenderTargetHandle>& renderTargetEntityManager) noexcept {
 
             if (pendingResizeCommands_.empty()) {
                 return;
@@ -362,14 +359,14 @@ export namespace helios::glfw {
                     continue;
                 }
 
-                if (auto entity = updateContext.find(windowHandle)) {
+                if (auto entity = entityManager.entity(windowHandle)) {
 
                     if (auto* wsc = entity->template get<Size2DComponent<THandle>>()) {
                         entity->setTrackedValue(wsc, windowSize);
                     }
                     if (auto* fbc =  entity->template get<RenderTargetBindingComponent<THandle>>()) {
                         auto renderTargetHandle = fbc->targetHandle();
-                        auto renderTarget = updateContext.find<RenderTargetHandle>(renderTargetHandle);
+                        auto renderTarget = renderTargetEntityManager.entity(renderTargetHandle);
                         auto fsc = renderTarget->template get<Size2DComponent<RenderTargetHandle>>();
 
                         logger_.info("Setting renderTarget size to {0},{1}", renderTargetSize[0], renderTargetSize[1]);
@@ -387,13 +384,12 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        template<typename TCommandBuffer>
-        void swapBuffers(UpdateContext& updateContext, TCommandBuffer& commandBuffer) noexcept {
+        void swapBuffers(UpdateContext& updateContext, EntityManager<THandle>& entityManager) noexcept {
             if (pendingBufferSwaps_.empty()) {
                 return;
             }
             for (const auto& swapBufferCommand : pendingBufferSwaps_) {
-                swapBuffer(updateContext, swapBufferCommand);
+                swapBuffer(updateContext, entityManager, swapBufferCommand);
             }
             pendingBufferSwaps_.clear();
         }
@@ -417,14 +413,13 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        template<typename TCommandBuffer>
-        void closeWindows(UpdateContext& updateContext, TCommandBuffer& commandBuffer) noexcept {
+        void closeWindows(EntityManager<THandle>& entityManager) noexcept {
             if (pendingCloseCommands_.empty()) {
                 return;
             }
 
             for (const auto& cmd : pendingCloseCommands_) {
-                auto entity = updateContext.find(cmd.windowHandle);
+                auto entity = entityManager.entity(cmd.windowHandle);
 
                 if (!entity) {
                     logger_.warn("Entity was not found");
@@ -438,7 +433,7 @@ export namespace helios::glfw {
                 }
 
                 glfwDestroyWindow(glfw->handle);
-                bool destroyed = ecsWorld_->destroy<THandle>(cmd.windowHandle);
+                bool destroyed = entityManager.destroy(cmd.windowHandle);
                 assert(destroyed && "Failed to destroy entity");
             }
 
@@ -469,17 +464,6 @@ export namespace helios::glfw {
         public:
 
 
-        using CommandBuffer = ecs::command::TypedCommandBuffer<
-            WindowResizeCommand<THandle>,
-            StateCommand<EngineState>
-        >;
-
-        explicit GLFWPlatformManager(
-            TRenderPlatform& renderPlatform,
-            ecs::EcsWorld& ecsWorld)
-        : renderPlatform_(renderPlatform),
-          ecsWorld_(&ecsWorld) {};
-
 
 
         /**
@@ -487,14 +471,18 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        bool executeCommands(UpdateContext& updateContext, CommandBuffer& commandBuffer)  noexcept {
+        bool executeCommands(
+            UpdateContext& updateContext,
+            EntityManager<THandle>& entityManager,
+            EntityManager<RenderTargetHandle>& renderTargetEntityManager,
+            CommandBuffer& commandBuffer, RenderBackend& renderBackend)  noexcept {
 
             if (shouldShutdown_) {
                 shutdown(updateContext, commandBuffer);
                 return true;
             }
 
-            if (initPlatform(updateContext)) {
+            if (initPlatform(updateContext, renderBackend)) {
                 commandBuffer.template add<StateCommand<EngineState>>(
                 StateTransitionRequest<EngineState>(
                     updateContext.session().template state<EngineState>(),
@@ -502,17 +490,17 @@ export namespace helios::glfw {
                 ));
             }
             pollEvents(updateContext);
-            const bool isContextAvailable = createWindows(updateContext, commandBuffer);
+            const bool isContextAvailable = createWindows(updateContext, entityManager, commandBuffer);
 
-            if (!renderPlatform_.isInitialized() && isContextAvailable) {
-                if (renderPlatform_.init()) {
+            if (!renderBackend.isInitialized() && isContextAvailable) {
+                if (renderBackend.finalizeSetup()) {
                     updateContext.runtimeEnvironment().setGPUReady();
                 }
             }
 
-            resizeWindows(updateContext, commandBuffer);
-            closeWindows(updateContext, commandBuffer);
-            swapBuffers(updateContext, commandBuffer);
+            resizeWindows(entityManager, renderTargetEntityManager);
+            closeWindows(entityManager);
+            swapBuffers(updateContext, entityManager);
 
             return true;
         }
