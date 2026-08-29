@@ -364,7 +364,7 @@ export namespace helios::glfw {
                     if (auto* wsc = entity->template get<Size2DComponent<THandle>>()) {
                         entity->setTrackedValue(wsc, windowSize);
                     }
-                    if (auto* fbc =  entity->template get<RenderTargetBindingComponent<THandle, RenderTargetHandle>>()) {
+                    if (auto* fbc =  entity->template get<RenderTargetBindingComponent<THandle, TRenderHandles>>()) {
                         auto renderTargetHandle = fbc->targetHandle();
                         auto renderTarget = renderTargetEntityManager.entity(renderTargetHandle);
                         auto fsc = renderTarget->template get<Size2DComponent<RenderTargetHandle>>();
