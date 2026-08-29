@@ -44,7 +44,6 @@ using namespace helios::glfw::types;
 using namespace helios::engine::state::commands;
 using namespace helios::engine::state::types;
 using namespace helios::ecs::common::concepts;
-using namespace helios::engine::rendering::common::concepts;
 using namespace helios::engine::core::types;
 using namespace helios::ecs;
 using namespace helios::engine::runtime::world;
@@ -59,8 +58,10 @@ export namespace helios::glfw {
      *
      * @tparam THandle Window/entity handle type.
      */
-    template<typename THandle>
+    template<typename THandle, typename TRenderHandles>
     class GLFWPlatformManager {
+
+        using RenderTargetHandle = typename TRenderHandles::RenderTargetHandle;
 
     public:
         using CommandBuffer = ecs::command::TypedCommandBuffer<
@@ -363,7 +364,7 @@ export namespace helios::glfw {
                     if (auto* wsc = entity->template get<Size2DComponent<THandle>>()) {
                         entity->setTrackedValue(wsc, windowSize);
                     }
-                    if (auto* fbc =  entity->template get<RenderTargetBindingComponent<THandle>>()) {
+                    if (auto* fbc =  entity->template get<RenderTargetBindingComponent<THandle, RenderTargetHandle>>()) {
                         auto renderTargetHandle = fbc->targetHandle();
                         auto renderTarget = renderTargetEntityManager.entity(renderTargetHandle);
                         auto fsc = renderTarget->template get<Size2DComponent<RenderTargetHandle>>();
