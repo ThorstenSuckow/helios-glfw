@@ -35,7 +35,6 @@ using namespace helios::engine::spatial::components;
 
 using namespace helios::engine::platform::environment::commands;
 using namespace helios::engine::platform::lifecycle::commands;
-using namespace helios::engine::platform::environment::types;
 using namespace helios::engine::platform::environment::components;
 using namespace helios::engine::platform::window::commands;
 using namespace helios::engine::platform::window::types;
@@ -73,6 +72,7 @@ export namespace helios::glfw {
     private:
 
         using Session = helios::engine::runtime::common::Session;
+        using RuntimeEnvironment = helios::engine::runtime::common::RuntimeEnvironment;
 
         using RenderBackend = helios::engine::rendering::RenderBackend;
 
@@ -103,7 +103,7 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        bool initPlatform(UpdateContext& updateContext, engine::runtime::common::Session& session, RenderBackend& renderBackend) noexcept {
+        bool initPlatform(UpdateContext& updateContext, RuntimeEnvironment& runtimeEnvironment, Session& session, RenderBackend& renderBackend) noexcept {
 
             if (!shouldInit_ || initialized_) {
                 return false;
@@ -121,8 +121,7 @@ export namespace helios::glfw {
             /**
              * @todo should be commands, session should not be mutable from shared UpdateContext
              */
-            initialized_ = session.initialize() &&
-                           updateContext.runtimeEnvironment().initialize();
+            initialized_ = session.initialize() && runtimeEnvironment.initialize();
             
             shouldInit_ = false;
             
@@ -474,6 +473,7 @@ export namespace helios::glfw {
          */
         bool executeCommands(
             UpdateContext& updateContext,
+            RuntimeEnvironment& runtimeEnvironment,
             Session& session,
             EntityManager<THandle>& entityManager,
             EntityManager<RenderTargetHandle>& renderTargetEntityManager,
@@ -484,7 +484,7 @@ export namespace helios::glfw {
                 return true;
             }
 
-            if (initPlatform(updateContext, session, renderBackend)) {
+            if (initPlatform(updateContext, runtimeEnvironment, session, renderBackend)) {
                 commandBuffer.template add<StateCommand<EngineState>>(
                 StateTransitionRequest<EngineState>(
                     session.template state<EngineState>(),
@@ -496,7 +496,7 @@ export namespace helios::glfw {
 
             if (!renderBackend.isInitialized() && isContextAvailable) {
                 if (renderBackend.finalizeSetup()) {
-                    updateContext.runtimeEnvironment().setGPUReady();
+                    runtimeEnvironment.setGPUReady();
                 }
             }
 
