@@ -20,7 +20,6 @@ import helios.glfw.components;
 import helios.engine.platform.window.components;
 import helios.engine.platform.window.commands.WindowCloseCommand;
 import helios.ecs;
-import helios.engine.platform.window.concepts.IsWindowHandle;
 
 using namespace helios::engine::runtime::world;
 using namespace helios::ecs;
@@ -29,7 +28,6 @@ using namespace helios::glfw::components;
 using namespace helios::engine::platform::window::commands;
 using namespace helios::engine::platform::window::components;
 using namespace helios::ecs::components;
-using namespace helios::engine::platform::window::concepts;
 export namespace helios::glfw::systems {
 
     /**

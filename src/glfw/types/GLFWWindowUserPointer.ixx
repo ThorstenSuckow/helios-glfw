@@ -6,11 +6,9 @@ module;
 
 export module helios.glfw.types.GLFWWindowUserPointer;
 
-import helios.engine.platform.window.concepts.IsWindowHandle;
 import helios.ecs.common.concepts;
 
 
-using namespace helios::engine::platform::window::concepts;
 using namespace helios::ecs::common::concepts;
 export namespace helios::glfw::types {
 
@@ -20,7 +18,6 @@ export namespace helios::glfw::types {
      * @tparam THandle Window handle type.
      */
     template<typename THandle, typename TCommandBuffer>
-    requires IsWindowHandle<THandle>
     struct GLFWWindowUserPointer {
         /** @brief Window entity handle associated with the native window. */
         THandle windowHandle;

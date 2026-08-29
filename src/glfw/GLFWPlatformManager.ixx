@@ -48,7 +48,6 @@ using namespace helios::engine::rendering::common::concepts;
 using namespace helios::engine::core::types;
 using namespace helios::ecs;
 using namespace helios::engine::runtime::world;
-using namespace helios::engine::platform::window::concepts;
 using namespace helios::engine::runtime::enginestate::types;
 
 #define HELIOS_LOG_SCOPE "helios::glfw::GLFWPlatformManager"
@@ -61,7 +60,6 @@ export namespace helios::glfw {
      * @tparam THandle Window/entity handle type.
      */
     template<typename THandle>
-    requires IsWindowHandle<THandle>
     class GLFWPlatformManager {
 
     public:

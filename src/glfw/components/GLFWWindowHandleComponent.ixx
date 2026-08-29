@@ -9,9 +9,6 @@ module;
 
 export module helios.glfw.components.GLFWWindowHandleComponent;
 
-import helios.engine.platform.window.concepts.IsWindowHandle;
-
-using namespace helios::engine::platform::window::concepts;
 export namespace helios::glfw::components {
 
     /**
@@ -20,7 +17,6 @@ export namespace helios::glfw::components {
      * @tparam THandle Window handle type.
      */
     template<typename THandle>
-    requires IsWindowHandle<THandle>
     struct GLFWWindowHandleComponent {
 
         /** @brief Native GLFW window pointer. */

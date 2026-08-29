@@ -10,10 +10,8 @@ export module helios.glfw.components.GLFWWindowUserPointerComponent;
 
 import helios.engine.runtime.world.GameWorld;
 import helios.glfw.types.GLFWWindowUserPointer;
-import helios.engine.platform.window.concepts.IsWindowHandle;
 
 using namespace helios::engine::runtime::world;
-using namespace helios::engine::platform::window::concepts;
 using namespace helios::glfw::types;
 export namespace helios::glfw::components {
 
