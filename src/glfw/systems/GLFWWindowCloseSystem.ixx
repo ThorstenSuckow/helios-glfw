@@ -11,7 +11,6 @@ export module helios.glfw.systems.GLFWWindowCloseSystem;
 
 
 import helios.engine.runtime.world.UpdateContext;
-import helios.engine.runtime.world.types;
 import helios.engine.runtime.concepts;
 
 

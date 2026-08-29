@@ -72,6 +72,8 @@ export namespace helios::glfw {
         >;
     private:
 
+        using Session = helios::engine::runtime::common::Session;
+
         using RenderBackend = helios::engine::rendering::RenderBackend;
 
         std::vector<WindowResizeCommand<THandle>> pendingResizeCommands_;
@@ -101,7 +103,7 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        bool initPlatform(UpdateContext& updateContext, RenderBackend& renderBackend) noexcept {
+        bool initPlatform(UpdateContext& updateContext, engine::runtime::common::Session& session, RenderBackend& renderBackend) noexcept {
 
             if (!shouldInit_ || initialized_) {
                 return false;
@@ -113,13 +115,13 @@ export namespace helios::glfw {
 
             renderBackend.configureWindowCreationHints();
 
-            assert(updateContext.session().state<EngineState>() == EngineState::Booting &&
+            assert(session.state<EngineState>() == EngineState::Booting &&
                 "Expected EngineState to be Booting during platform initialization");
 
             /**
              * @todo should be commands, session should not be mutable from shared UpdateContext
              */
-            initialized_ = updateContext.session().initialize() &&
+            initialized_ = session.initialize() &&
                            updateContext.runtimeEnvironment().initialize();
             
             shouldInit_ = false;
@@ -290,7 +292,7 @@ export namespace helios::glfw {
          * @param updateContext Frame-local update context.
          * @param cmd Swap-buffers command.
          */
-        void swapBuffer(UpdateContext& updateContext, EntityManager<THandle>& entityManager, const SwapBuffersCommand<THandle>& cmd) noexcept {
+        void swapBuffer(UpdateContext& updateContext, Session& session, EntityManager<THandle>& entityManager, const SwapBuffersCommand<THandle>& cmd) noexcept {
 
             const auto entity = entityManager.entity(cmd.windowHandle);
 
@@ -307,7 +309,7 @@ export namespace helios::glfw {
                 return;
             }
 
-            assert((updateContext.session().state<EngineState>() != EngineState::Booting) &&
+            assert((session.state<EngineState>() != EngineState::Booting) &&
                 "GLFWSwapBuffersSystem should not be running during boot");
             assert(glfw->handle && "GLFWWindowComponent has no native handle");
             glfwSwapBuffers(glfw->handle);
@@ -384,12 +386,12 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        void swapBuffers(UpdateContext& updateContext, EntityManager<THandle>& entityManager) noexcept {
+        void swapBuffers(UpdateContext& updateContext, Session& session, EntityManager<THandle>& entityManager) noexcept {
             if (pendingBufferSwaps_.empty()) {
                 return;
             }
             for (const auto& swapBufferCommand : pendingBufferSwaps_) {
-                swapBuffer(updateContext, entityManager, swapBufferCommand);
+                swapBuffer(updateContext, session, entityManager, swapBufferCommand);
             }
             pendingBufferSwaps_.clear();
         }
@@ -446,14 +448,13 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        template<typename TCommandBuffer>
-        void shutdown(UpdateContext& updateContext, TCommandBuffer& commandBuffer) noexcept {
+        void shutdown(UpdateContext& updateContext, Session& session, CommandBuffer& commandBuffer) noexcept {
 
             glfwTerminate();
 
             commandBuffer.template add<StateCommand<EngineState>>(
                StateTransitionRequest<EngineState>(
-                   updateContext.session().state<EngineState>(),
+                   session.state<EngineState>(),
                    EngineStateTransitionId::ShutdownRequest
                )
            );
@@ -473,19 +474,20 @@ export namespace helios::glfw {
          */
         bool executeCommands(
             UpdateContext& updateContext,
+            Session& session,
             EntityManager<THandle>& entityManager,
             EntityManager<RenderTargetHandle>& renderTargetEntityManager,
             CommandBuffer& commandBuffer, RenderBackend& renderBackend)  noexcept {
 
             if (shouldShutdown_) {
-                shutdown(updateContext, commandBuffer);
+                shutdown(updateContext, session, commandBuffer);
                 return true;
             }
 
-            if (initPlatform(updateContext, renderBackend)) {
+            if (initPlatform(updateContext, session, renderBackend)) {
                 commandBuffer.template add<StateCommand<EngineState>>(
                 StateTransitionRequest<EngineState>(
-                    updateContext.session().template state<EngineState>(),
+                    session.template state<EngineState>(),
                     EngineStateTransitionId::BootRequest
                 ));
             }
@@ -500,7 +502,7 @@ export namespace helios::glfw {
 
             resizeWindows(entityManager, renderTargetEntityManager);
             closeWindows(entityManager);
-            swapBuffers(updateContext, entityManager);
+            swapBuffers(updateContext, session, entityManager);
 
             return true;
         }
