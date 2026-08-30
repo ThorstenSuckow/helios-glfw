@@ -11,6 +11,7 @@ export module helios.glfw.systems.GLFWWindowCloseSystem;
 
 
 import helios.engine.runtime.gameloop.types;
+import helios.ecs.EcsWorld;
 
 
 
@@ -38,7 +39,7 @@ export namespace helios::glfw::systems {
     template<typename THandle>
     class GLFWWindowCloseSystem {
 
-        using UpdateContext = helios::engine::runtime::gameloop::types::UpdateContext;
+        using EcsWorld = ecs::EcsWorld;
 
     public:
 
@@ -48,11 +49,11 @@ export namespace helios::glfw::systems {
         /**
          * @brief Scans shown windows and queues close commands for requested closures.
          *
-         * @param updateContext Frame-local update context.
+         * @param ecsWorld Frame-local ECS world.
          */
-        void update(UpdateContext& updateContext, CommandBuffer& cmdBuffer) noexcept {
+        void update(EcsWorld& ecsWorld, CommandBuffer& cmdBuffer) noexcept {
 
-            for (auto [entity, wc, glfw, wsc]: updateContext.template view<
+            for (auto [entity, wc, glfw, wsc]: ecsWorld.view<
                 THandle,
                 WindowComponent<THandle>,
                 GLFWWindowHandleComponent<THandle>,
