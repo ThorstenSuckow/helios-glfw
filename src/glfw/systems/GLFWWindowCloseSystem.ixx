@@ -10,8 +10,8 @@ export module helios.glfw.systems.GLFWWindowCloseSystem;
 
 
 
-import helios.engine.runtime.world.UpdateContext;
-import helios.engine.runtime.concepts;
+import helios.engine.runtime.gameloop.types;
+
 
 
 import helios.ecs.command.types;
@@ -21,7 +21,7 @@ import helios.engine.platform.window.components;
 import helios.engine.platform.window.commands.WindowCloseCommand;
 import helios.ecs;
 
-using namespace helios::engine::runtime::world;
+using namespace helios::engine::runtime;
 using namespace helios::ecs;
 using namespace helios::ecs::common::concepts;
 using namespace helios::glfw::components;
@@ -37,6 +37,9 @@ export namespace helios::glfw::systems {
      */
     template<typename THandle>
     class GLFWWindowCloseSystem {
+
+        using UpdateContext = helios::engine::runtime::gameloop::types::UpdateContext;
+
     public:
 
 

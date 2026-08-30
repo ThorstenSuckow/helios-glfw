@@ -22,15 +22,13 @@ import helios.engine.core;
 import helios.engine.spatial;
 import helios.engine.rendering;
 import helios.engine.runtime;
+import helios.engine.runtime.gameloop.types;
 import helios.engine.state;
 import helios.engine.platform;
 
 import helios.glfw.components;
 import helios.glfw.types;
 
-
-using namespace helios::engine::rendering::renderTarget::types;
-using namespace helios::engine::rendering::renderTarget::components;
 using namespace helios::engine::spatial::components;
 
 using namespace helios::engine::platform::environment::commands;
@@ -46,7 +44,6 @@ using namespace helios::engine::state::types;
 using namespace helios::ecs::common::concepts;
 using namespace helios::engine::core::types;
 using namespace helios::ecs;
-using namespace helios::engine::runtime::world;
 using namespace helios::engine::runtime::enginestate::types;
 
 #define HELIOS_LOG_SCOPE "helios::glfw::GLFWPlatformManager"
@@ -62,6 +59,9 @@ export namespace helios::glfw {
     class GLFWPlatformManager {
 
         using RenderTargetHandle = typename TRenderHandles::RenderTargetHandle;
+        using UpdateContext = helios::engine::runtime::gameloop::types::UpdateContext;
+        using RenderTargetSize = engine::rendering::common::types::RenderTargetSize;
+        using RenderTargetBindingComponent = engine::rendering::common::components::RenderTargetBindingComponent<THandle, TRenderHandles>;
 
     public:
         using CommandBuffer = ecs::command::TypedCommandBuffer<
@@ -70,8 +70,8 @@ export namespace helios::glfw {
         >;
     private:
 
-        using Session = helios::engine::runtime::common::Session;
-        using RuntimeEnvironment = helios::engine::runtime::common::RuntimeEnvironment;
+        using Session = helios::engine::runtime::Session;
+        using RuntimeEnvironment = helios::engine::runtime::RuntimeEnvironment;
 
         using RenderBackend = helios::engine::rendering::RenderBackend;
 
@@ -364,7 +364,7 @@ export namespace helios::glfw {
                     if (auto* wsc = entity->template get<Size2DComponent<THandle>>()) {
                         entity->setTrackedValue(wsc, windowSize);
                     }
-                    if (auto* fbc =  entity->template get<RenderTargetBindingComponent<THandle, TRenderHandles>>()) {
+                    if (auto* fbc =  entity->template get<RenderTargetBindingComponent>()) {
                         auto renderTargetHandle = fbc->targetHandle();
                         auto renderTarget = renderTargetEntityManager.entity(renderTargetHandle);
                         auto fsc = renderTarget->template get<Size2DComponent<RenderTargetHandle>>();
