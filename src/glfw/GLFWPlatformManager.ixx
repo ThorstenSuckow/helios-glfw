@@ -58,6 +58,7 @@ export namespace helios::glfw {
     template<typename THandle, typename TRenderHandles>
     class GLFWPlatformManager {
 
+        using EntityWorld = entity::EntityWorld;
         using RenderTargetHandle = typename TRenderHandles::RenderTargetHandle;
         using UpdateContext = helios::engine::runtime::gameloop::types::UpdateContext;
         using RenderTargetSize = engine::rendering::common::types::RenderTargetSize;
@@ -136,7 +137,7 @@ export namespace helios::glfw {
          *
          * @return `true` if the window was created and bound successfully; otherwise `false`.
          */
-        bool createWindow(UpdateContext& updateContext, EcsWorld& ecsWorld, EntityManager<THandle>& entityManager, const WindowCreateCommand<THandle>& cmd, CommandBuffer& commandBuffer) noexcept {
+        bool createWindow(UpdateContext& updateContext, EntityWorld& ecsWorld, entity::EntityManager<THandle>& entityManager, const WindowCreateCommand<THandle>& cmd, CommandBuffer& commandBuffer) noexcept {
 
             auto window = entityManager.entity(cmd.windowHandle);
 
@@ -216,7 +217,7 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        void removeCurrentContext(EcsWorld& ecsWorld, EntityManager<THandle>& entityManager) {
+        void removeCurrentContext(EntityWorld& ecsWorld, entity::EntityManager<THandle>& entityManager) {
             // remove any currentcontext component
             currentContexts_.clear();
             for (auto [window, cc]: ecsWorld.view<THandle, CurrentContextComponent<THandle>>()) {
@@ -235,7 +236,7 @@ export namespace helios::glfw {
          *
          * @param handle Window handle for which the listener is installed.
          */
-        void installResizeListener(THandle handle, EntityManager<THandle>& entityManager, CommandBuffer& commandBuffer) noexcept {
+        void installResizeListener(THandle handle, entity::EntityManager<THandle>& entityManager, CommandBuffer& commandBuffer) noexcept {
 
             auto entity = entityManager.entity(handle);
 
@@ -290,7 +291,7 @@ export namespace helios::glfw {
          * @param updateContext Frame-local update context.
          * @param cmd Swap-buffers command.
          */
-        void swapBuffer(UpdateContext& updateContext, Session& session, EntityManager<THandle>& entityManager, const SwapBuffersCommand<THandle>& cmd) noexcept {
+        void swapBuffer(UpdateContext& updateContext, Session& session, entity::EntityManager<THandle>& entityManager, const SwapBuffersCommand<THandle>& cmd) noexcept {
 
             const auto entity = entityManager.entity(cmd.windowHandle);
 
@@ -321,7 +322,7 @@ export namespace helios::glfw {
          *
          * @return `true` if at least one window was created in this flush; otherwise `false`.
          */
-        bool createWindows(UpdateContext& updateContext, EcsWorld& ecsWorld, EntityManager<THandle>& entityManager, CommandBuffer& commandBuffer) noexcept {
+        bool createWindows(UpdateContext& updateContext, EntityWorld& ecsWorld, entity::EntityManager<THandle>& entityManager, CommandBuffer& commandBuffer) noexcept {
             if (windowCreateCommands_.empty()) {
                 return false;
             }
@@ -346,8 +347,8 @@ export namespace helios::glfw {
          *
          */
         void resizeWindows(
-            EntityManager<THandle>& entityManager,
-            EntityManager<RenderTargetHandle>& renderTargetEntityManager) noexcept {
+            entity::EntityManager<THandle>& entityManager,
+            entity::EntityManager<RenderTargetHandle>& renderTargetEntityManager) noexcept {
 
             if (pendingResizeCommands_.empty()) {
                 return;
@@ -384,7 +385,7 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        void swapBuffers(UpdateContext& updateContext, Session& session, EntityManager<THandle>& entityManager) noexcept {
+        void swapBuffers(UpdateContext& updateContext, Session& session, entity::EntityManager<THandle>& entityManager) noexcept {
             if (pendingBufferSwaps_.empty()) {
                 return;
             }
@@ -413,7 +414,7 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        void closeWindows(EntityManager<THandle>& entityManager) noexcept {
+        void closeWindows(entity::EntityManager<THandle>& entityManager) noexcept {
             if (pendingCloseCommands_.empty()) {
                 return;
             }
@@ -472,11 +473,11 @@ export namespace helios::glfw {
          */
         bool executeCommands(
             UpdateContext& updateContext,
-            EcsWorld& ecsWorld,
+            EntityWorld& ecsWorld,
             RuntimeEnvironment& runtimeEnvironment,
             Session& session,
-            EntityManager<THandle>& entityManager,
-            EntityManager<RenderTargetHandle>& renderTargetEntityManager,
+            entity::EntityManager<THandle>& entityManager,
+            entity::EntityManager<RenderTargetHandle>& renderTargetEntityManager,
             CommandBuffer& commandBuffer, RenderBackend& renderBackend)  noexcept {
 
             if (shouldShutdown_) {

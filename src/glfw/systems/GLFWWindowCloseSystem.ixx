@@ -11,7 +11,7 @@ export module helios.glfw.systems.GLFWWindowCloseSystem;
 
 
 import helios.engine.runtime.gameloop.types;
-import helios.ecs.EcsWorld;
+import helios.ecs.entity.EntityWorld;
 
 
 
@@ -39,7 +39,7 @@ export namespace helios::glfw::systems {
     template<typename THandle>
     class GLFWWindowCloseSystem {
 
-        using EcsWorld = ecs::EcsWorld;
+        using EntityWorld = ecs::entity::EntityWorld;
 
     public:
 
@@ -51,7 +51,7 @@ export namespace helios::glfw::systems {
          *
          * @param ecsWorld Frame-local ECS world.
          */
-        void update(EcsWorld& ecsWorld, CommandBuffer& cmdBuffer) noexcept {
+        void update(EntityWorld& ecsWorld, CommandBuffer& cmdBuffer) noexcept {
 
             for (auto [entity, wc, glfw, wsc]: ecsWorld.view<
                 THandle,
