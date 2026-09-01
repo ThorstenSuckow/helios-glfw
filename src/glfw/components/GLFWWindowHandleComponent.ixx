@@ -19,6 +19,9 @@ export namespace helios::glfw::components {
     template<typename THandle>
     struct GLFWWindowHandleComponent {
 
+
+        using HandleType = THandle;
+
         /** @brief Native GLFW window pointer. */
         GLFWwindow* handle = nullptr;
 
