@@ -16,7 +16,9 @@ export module helios.glfw.GLFWPlatformManager;
 import helios.core.log;
 
 import helios.ecs;
-
+import helios.ecs.entity.EntityAccessSet;
+import helios.ecs.entity.Query;
+import helios.ecs.entity.concepts;
 
 import helios.engine.core;
 import helios.engine.spatial;
@@ -63,6 +65,18 @@ export namespace helios::glfw {
         using UpdateContext = helios::engine::runtime::gameloop::types::UpdateContext;
         using RenderTargetSize = engine::rendering::common::types::RenderTargetSize;
         using RenderTargetBindingComponent = engine::rendering::common::components::RenderTargetBindingComponent<THandle, TRenderHandles>;
+
+        template<typename TRead, typename TWrite>
+        using Query = ecs::entity::Query<THandle, TRead, TWrite>;
+
+        template<typename ... TReads>
+        using Read = ecs::entity::ReadSet<TReads...>;
+
+        template<typename ... TWrites>
+        using Write = ecs::entity::WriteSet<TWrites...>;
+
+        using CurrentContextQuery = Query<Read<CurrentContextComponent<THandle>>, Write<>>;
+
 
     public:
         using CommandBuffer = ecs::command::TypedCommandBuffer<
@@ -137,7 +151,13 @@ export namespace helios::glfw {
          *
          * @return `true` if the window was created and bound successfully; otherwise `false`.
          */
-        bool createWindow(UpdateContext& updateContext, EntityWorld& ecsWorld, entity::EntityManager<THandle>& entityManager, const WindowCreateCommand<THandle>& cmd, CommandBuffer& commandBuffer) noexcept {
+        bool createWindow(
+            UpdateContext& updateContext,
+            CurrentContextQuery& currentContextQuery,
+            entity::EntityManager<THandle>& entityManager,
+            const WindowCreateCommand<THandle>& cmd,
+            CommandBuffer& commandBuffer
+        ) noexcept {
 
             auto window = entityManager.entity(cmd.windowHandle);
 
@@ -181,7 +201,7 @@ export namespace helios::glfw {
             >(WindowSize(cfg.size));
             window->template add<GLFWWindowHandleComponent<THandle>>(nativeHandle);
 
-            removeCurrentContext(ecsWorld, entityManager);
+            removeCurrentContext(currentContextQuery, entityManager);
 
             glfwMakeContextCurrent(nativeHandle);
             glfwSwapInterval(cfg.vsyncEnabled ? 1 : 0);
@@ -217,10 +237,10 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        void removeCurrentContext(EntityWorld& ecsWorld, entity::EntityManager<THandle>& entityManager) {
+        void removeCurrentContext(CurrentContextQuery& currentContextQuery, entity::EntityManager<THandle>& entityManager) {
             // remove any currentcontext component
             currentContexts_.clear();
-            for (auto [window, cc]: ecsWorld.view<THandle, CurrentContextComponent<THandle>>()) {
+            for (auto [window, cc] : currentContextQuery) {
                 currentContexts_.push_back(window.handle());
             }
             for (auto& handle : currentContexts_) {
@@ -322,12 +342,23 @@ export namespace helios::glfw {
          *
          * @return `true` if at least one window was created in this flush; otherwise `false`.
          */
-        bool createWindows(UpdateContext& updateContext, EntityWorld& ecsWorld, entity::EntityManager<THandle>& entityManager, CommandBuffer& commandBuffer) noexcept {
+        bool createWindows(
+            UpdateContext& updateContext,
+            CurrentContextQuery& currentContextQuery,
+            entity::EntityManager<THandle>& entityManager,
+            CommandBuffer& commandBuffer
+        ) noexcept {
             if (windowCreateCommands_.empty()) {
                 return false;
             }
             for (const auto& windowCreateCommand  : windowCreateCommands_) {
-                const bool isContextAvailable = createWindow(updateContext, ecsWorld, entityManager, windowCreateCommand, commandBuffer);
+                const bool isContextAvailable = createWindow(
+                    updateContext,
+                    currentContextQuery,
+                    entityManager,
+                    windowCreateCommand,
+                    commandBuffer
+                );
                 if (!isContextAvailable) {
                     logger_.error("Failed to create window");
                     assert(false && "Failed to create window");
@@ -473,7 +504,7 @@ export namespace helios::glfw {
          */
         bool executeCommands(
             UpdateContext& updateContext,
-            EntityWorld& ecsWorld,
+            CurrentContextQuery currentContextQuery,
             RuntimeEnvironment& runtimeEnvironment,
             Session& session,
             entity::EntityManager<THandle>& entityManager,
@@ -493,7 +524,7 @@ export namespace helios::glfw {
                 ));
             }
             pollEvents(updateContext);
-            const bool isContextAvailable = createWindows(updateContext, ecsWorld, entityManager, commandBuffer);
+            const bool isContextAvailable = createWindows(updateContext, currentContextQuery, entityManager, commandBuffer);
 
             if (!renderBackend.isInitialized() && isContextAvailable) {
                 if (renderBackend.finalizeSetup()) {
