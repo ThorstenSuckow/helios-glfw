@@ -12,6 +12,8 @@ export module helios.glfw.systems.GLFWWindowCloseSystem;
 
 import helios.engine.runtime.gameloop.types;
 import helios.ecs.entity.EntityWorld;
+import helios.ecs.entity.EntityAccessSet;
+import helios.ecs.entity.Query;
 
 
 
@@ -41,24 +43,38 @@ export namespace helios::glfw::systems {
 
         using EntityWorld = ecs::entity::EntityWorld;
 
+        template<typename TRead, typename TWrite>
+        using Query = ecs::entity::Query<THandle, TRead, TWrite>;
+
+        template<typename ... TReads>
+        using Read = ecs::entity::ReadSet<TReads...>;
+
+        template<typename ... TWrites>
+        using Write = ecs::entity::WriteSet<TWrites...>;
+
     public:
 
+        using HandleType = THandle;
 
         using CommandBuffer = ecs::command::TypedCommandBuffer<WindowCloseCommand<THandle>>;
 
         /**
          * @brief Scans shown windows and queues close commands for requested closures.
          *
-         * @param ecsWorld Frame-local ECS world.
+         * @param query Frame-local query over shown GLFW-backed windows.
          */
-        void update(EntityWorld& ecsWorld, CommandBuffer& cmdBuffer) noexcept {
+        void update(
+            Query<
+                Read<WindowComponent<THandle>,
+                    GLFWWindowHandleComponent<THandle>,
+                    WindowShownComponent<THandle>
+                >,
+                Write<>
+            > query,
+            CommandBuffer& cmdBuffer
+        ) noexcept {
 
-            for (auto [entity, wc, glfw, wsc]: ecsWorld.view<
-                THandle,
-                WindowComponent<THandle>,
-                GLFWWindowHandleComponent<THandle>,
-                WindowShownComponent<THandle>
-                >().withActive()) {
+            for (auto [entity, wc, glfw, wsc] : query.withActive()) {
                 if (glfwWindowShouldClose(glfw->handle)) {
                     cmdBuffer.template add<WindowCloseCommand<THandle>>(
                         entity.handle()
