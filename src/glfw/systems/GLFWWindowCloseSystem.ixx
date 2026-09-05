@@ -43,8 +43,8 @@ export namespace helios::glfw::systems {
 
         using EntityWorld = ecs::entity::EntityWorld;
 
-        template<typename TRead, typename TWrite>
-        using Query = ecs::entity::Query<THandle, TRead, TWrite>;
+        template<typename TRead, typename TWrite, typename TFilter = ecs::entity::Filter<ecs::entity::AnyDirty<>>>
+        using Query = ecs::entity::Query<TRead, TWrite, TFilter>;
 
         template<typename ... TReads>
         using Read = ecs::entity::ReadSet<TReads...>;
@@ -69,12 +69,13 @@ export namespace helios::glfw::systems {
                     GLFWWindowHandleComponent<THandle>,
                     WindowShownComponent<THandle>
                 >,
-                Write<>
+                Write<>,
+                ecs::entity::Filter<ecs::entity::IsActive>
             > query,
             CommandBuffer& cmdBuffer
         ) noexcept {
 
-            for (auto [entity, wc, glfw, wsc] : query.withActive()) {
+            for (auto [entity, wc, glfw, wsc] : query) {
                 if (glfwWindowShouldClose(glfw->handle)) {
                     cmdBuffer.template add<WindowCloseCommand<THandle>>(
                         entity.handle()
