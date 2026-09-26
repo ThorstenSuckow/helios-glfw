@@ -44,7 +44,7 @@ export namespace helios::glfw::systems {
         using EntityWorld = ecs::entity::EntityWorld;
 
         template<typename TRead, typename TWrite, typename TFilter = ecs::entity::query::Filter<ecs::entity::query::AnyDirty<>>>
-        using Query = ecs::entity::query::Query<TRead, TWrite, TFilter>;
+        using Query = ecs::entity::query::Query<THandle, TRead, TWrite, TFilter>;
 
         template<typename ... TReads>
         using Read = ecs::entity::ReadSet<TReads...>;
@@ -65,9 +65,9 @@ export namespace helios::glfw::systems {
          */
         void update(
             Query<
-                Read<WindowComponent<THandle>,
-                    GLFWWindowHandleComponent<THandle>,
-                    WindowShownComponent<THandle>
+                Read<WindowComponent,
+                    GLFWWindowHandleComponent,
+                    WindowShownComponent
                 >,
                 Write<>,
                 ecs::entity::query::Filter<ecs::entity::query::IsActive>

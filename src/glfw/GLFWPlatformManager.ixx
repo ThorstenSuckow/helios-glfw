@@ -64,10 +64,10 @@ export namespace helios::glfw {
         using RenderTargetHandle = typename TRenderHandles::RenderTargetHandle;
         using UpdateContext = helios::engine::runtime::gameloop::types::UpdateContext;
         using RenderTargetSize = engine::rendering::common::types::RenderTargetSize;
-        using RenderTargetBindingComponent = engine::rendering::common::components::RenderTargetBindingComponent<THandle, TRenderHandles>;
+        using RenderTargetBindingComponent = engine::rendering::common::components::RenderTargetBindingComponent<TRenderHandles>;
 
-        template<typename TRead, typename TWrite, typename TFilter = ecs::entity::query::Filter<ecs::entity::query::AnyDirty<>>>
-        using Query = ecs::entity::query::Query<TRead, TWrite, TFilter>;
+        template<typename TMemberHandle, typename TRead, typename TWrite, typename TFilter = ecs::entity::query::Filter<ecs::entity::query::AnyDirty<>>>
+        using Query = ecs::entity::query::Query<TMemberHandle, TRead, TWrite, TFilter>;
 
         template<typename ... TReads>
         using Read = ecs::entity::ReadSet<TReads...>;
@@ -76,7 +76,8 @@ export namespace helios::glfw {
         using Write = ecs::entity::WriteSet<TWrites...>;
 
         using CurrentContextQuery = Query<
-            Read<CurrentContextComponent<THandle>>, Write<>
+            THandle,
+            Read<CurrentContextComponent>, Write<>
         >;
 
 
@@ -189,27 +190,25 @@ export namespace helios::glfw {
                 );
             }
 
-            assert(window->template has<WindowCreateRequestComponent<THandle>>() && "Expected entity to have WindowCreateRequestComponent");
-            window->template remove<WindowCreateRequestComponent<THandle>>();
-            assert(!window->template has<WindowCreateRequestComponent<THandle>>() && "Expected entity to not have WindowCreateRequestComponent");
-            assert(!window->template has<WindowComponent<THandle>>() && "Expected entity to not have WindowComponent");
-            window->template add<WindowComponent<THandle>>(
+            assert(window->template has<WindowCreateRequestComponent>() && "Expected entity to have WindowCreateRequestComponent");
+            window->template remove<WindowCreateRequestComponent>();
+            assert(!window->template has<WindowCreateRequestComponent>() && "Expected entity to not have WindowCreateRequestComponent");
+            assert(!window->template has<WindowComponent>() && "Expected entity to not have WindowComponent");
+            window->template add<WindowComponent>(
                 std::move(cfg.title),
                 cfg.aspectRatioNumer,
                 cfg.aspectRatioDenom
             );
-            window->template trackDirty<
-                Size2DComponent<THandle>
-            >(WindowSize(cfg.size));
-            window->template add<GLFWWindowHandleComponent<THandle>>(nativeHandle);
+            window->template trackDirty<Size2DComponent>(WindowSize(cfg.size));
+            window->template add<GLFWWindowHandleComponent>(nativeHandle);
 
             removeCurrentContext(currentContextQuery, entityManager);
 
             glfwMakeContextCurrent(nativeHandle);
             glfwSwapInterval(cfg.vsyncEnabled ? 1 : 0);
-            window->template add<CurrentContextComponent<THandle>>();
+            window->template add<CurrentContextComponent>();
 
-            window->template add<WindowShownComponent<THandle>>();
+            window->template add<WindowShownComponent>();
             window->template add<GLFWWindowUserPointerComponent<THandle, TCommandBuffer>>(
                 GLFWWindowUserPointer<THandle, TCommandBuffer>(
                     cmd.windowHandle, &commandBuffer
@@ -248,7 +247,7 @@ export namespace helios::glfw {
             for (auto& handle : currentContexts_) {
                 auto go = entityManager.entity(handle);
                 if (go) {
-                    go->template remove<CurrentContextComponent<THandle>>();
+                    go->template remove<CurrentContextComponent>();
                 }
             }
         }
@@ -269,7 +268,7 @@ export namespace helios::glfw {
                 return;
             }
 
-            const auto* glfw = entity->template get<GLFWWindowHandleComponent<THandle>>();
+            const auto* glfw = entity->template get<GLFWWindowHandleComponent>();
             if (!glfw) {
                 logger_.error("Entity does not have GLFWWindowHandleComponent");
                 assert(false && "Entity does not have GLFWWindowHandleComponent");
@@ -322,7 +321,7 @@ export namespace helios::glfw {
                 return;
             }
 
-            const auto* glfw = entity->template get<GLFWWindowHandleComponent<THandle>>();
+            const auto* glfw = entity->template get<GLFWWindowHandleComponent>();
 
             if (!glfw) {
                 logger_.error("Entity does not have GLFWWindowHandleComponent");
@@ -395,13 +394,13 @@ export namespace helios::glfw {
 
                 if (auto entity = entityManager.entity(windowHandle)) {
 
-                    if (auto* wsc = entity->template get<Size2DComponent<THandle>>()) {
+                    if (auto* wsc = entity->template get<Size2DComponent>()) {
                         entity->setTrackedValue(wsc, windowSize);
                     }
                     if (auto* fbc =  entity->template get<RenderTargetBindingComponent>()) {
                         auto renderTargetHandle = fbc->targetHandle();
                         auto renderTarget = renderTargetEntityManager.entity(renderTargetHandle);
-                        auto fsc = renderTarget->template get<Size2DComponent<RenderTargetHandle>>();
+                        auto fsc = renderTarget->template get<Size2DComponent>();
 
                         logger_.info("Setting renderTarget size to {0},{1}", renderTargetSize[0], renderTargetSize[1]);
                         renderTarget->setTrackedValue(fsc, renderTargetSize);
@@ -460,7 +459,7 @@ export namespace helios::glfw {
                     continue;
                 }
 
-                const auto* glfw = entity->template get<GLFWWindowHandleComponent<THandle>>();
+                const auto* glfw = entity->template get<GLFWWindowHandleComponent>();
                 if (!glfw) {
                     logger_.warn("Entity does not have GLFWWindowHandleComponent");
                     continue;
