@@ -24,7 +24,6 @@ export namespace helios::glfw::components {
     template<typename THandle, typename TCommandBuffer>
     struct GLFWWindowUserPointerComponent {
 
-        using HandleType = THandle;
 
         /** @brief Typed payload exposed to GLFW callbacks via `glfwSetWindowUserPointer`. */
         GLFWWindowUserPointer<THandle, TCommandBuffer> userPointer;
