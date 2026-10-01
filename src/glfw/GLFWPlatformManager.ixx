@@ -503,7 +503,7 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        bool commit(
+        bool execute(
             UpdateContext& updateContext,
             CurrentContextQuery currentContextQuery,
             RuntimeEnvironment& runtimeEnvironment,
