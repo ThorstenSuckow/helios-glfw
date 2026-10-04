@@ -16,7 +16,7 @@ export module helios.glfw.GLFWPlatformManager;
 import helios.core.log;
 
 import helios.ecs;
-import helios.ecs.entity.EntityAccessSet;
+import helios.ecs.entity.QueryAccessSet;
 import helios.ecs.entity.query.Query;
 import helios.ecs.entity.concepts;
 
