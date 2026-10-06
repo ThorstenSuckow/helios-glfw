@@ -199,7 +199,7 @@ export namespace helios::glfw {
                 cfg.aspectRatioNumer,
                 cfg.aspectRatioDenom
             );
-            window->template trackDirty<Size2DComponent>(WindowSize(cfg.size));
+            window->template add<Size2DComponent>(WindowSize(cfg.size));
             window->template add<GLFWWindowHandleComponent>(nativeHandle);
 
             removeCurrentContext(currentContextQuery, entityManager);
