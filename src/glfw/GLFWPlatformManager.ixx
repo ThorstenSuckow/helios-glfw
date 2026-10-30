@@ -120,7 +120,7 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        bool initPlatform(UpdateContext& updateContext, RuntimeEnvironment& runtimeEnvironment, Session& session, RenderBackend& renderBackend) noexcept {
+        bool initPlatform(UpdateContext&, RuntimeEnvironment& runtimeEnvironment, Session& session, RenderBackend& renderBackend) noexcept {
 
             if (!shouldInit_ || initialized_) {
                 return false;
@@ -155,7 +155,7 @@ export namespace helios::glfw {
          * @return `true` if the window was created and bound successfully; otherwise `false`.
          */
         bool createWindow(
-            UpdateContext& updateContext,
+            UpdateContext&,
             CurrentContextQuery& currentContextQuery,
             entity::EntityManager<THandle>& entityManager,
             const WindowCreateCommand<THandle>& cmd,
@@ -173,8 +173,8 @@ export namespace helios::glfw {
             auto& cfg = cmd.windowConfig;
 
             auto* nativeHandle = glfwCreateWindow(
-                cfg.size[0],
-                cfg.size[1],
+                static_cast<int>(cfg.size[0]),
+                static_cast<int>(cfg.size[1]),
                 cfg.title.c_str(),
                 nullptr,
                 nullptr
@@ -185,8 +185,8 @@ export namespace helios::glfw {
             if (cfg.aspectRatioNumer > 0 && cfg.aspectRatioDenom > 0) {
                 glfwSetWindowAspectRatio(
                     nativeHandle,
-                    cfg.aspectRatioNumer,
-                    cfg.aspectRatioDenom
+                    static_cast<int>(cfg.aspectRatioNumer),
+                    static_cast<int>(cfg.aspectRatioDenom)
                 );
             }
 
@@ -199,7 +199,7 @@ export namespace helios::glfw {
                 cfg.aspectRatioNumer,
                 cfg.aspectRatioDenom
             );
-            window->template add<Size2DComponent>(WindowSize(cfg.size));
+            window->template add<Size2DComponent>(WindowSize(static_cast<float>(cfg.size[0]), static_cast<float>(cfg.size[1])));
             window->template add<GLFWWindowHandleComponent>(nativeHandle);
 
             removeCurrentContext(currentContextQuery, entityManager);
@@ -214,7 +214,7 @@ export namespace helios::glfw {
                     cmd.windowHandle, &commandBuffer
             ));
 
-            installResizeListener(cmd.windowHandle, entityManager, commandBuffer);
+            installResizeListener(cmd.windowHandle, entityManager);
 
 
             int renderTargetWidth = 0;
@@ -227,8 +227,8 @@ export namespace helios::glfw {
 
             commandBuffer.template add<WindowResizeCommand<THandle>>(
                 cmd.windowHandle,
-                WindowSize(windowWidth, windowHeight),
-                RenderTargetSize(renderTargetWidth, renderTargetHeight));
+                WindowSize(static_cast<float>(windowWidth), static_cast<float>(windowHeight)),
+                RenderTargetSize(static_cast<float>(renderTargetWidth), static_cast<float>(renderTargetHeight)));
 
             return true;
         }
@@ -257,7 +257,7 @@ export namespace helios::glfw {
          *
          * @param handle Window handle for which the listener is installed.
          */
-        void installResizeListener(THandle handle, entity::EntityManager<THandle>& entityManager, CommandBuffer& commandBuffer) noexcept {
+        void installResizeListener(THandle handle, entity::EntityManager<THandle>& entityManager) noexcept {
 
             auto entity = entityManager.entity(handle);
 
@@ -298,8 +298,8 @@ export namespace helios::glfw {
                     glfwGetWindowSize(nativeHandle, &windowWidth, &windowHeight);
                     ptr->commandBuffer->template add<WindowResizeCommand<THandle>>(
                         ptr->windowHandle,
-                        WindowSize(windowWidth, windowHeight),
-                        RenderTargetSize(width, height)
+                        WindowSize(static_cast<float>(windowWidth), static_cast<float>(windowHeight)),
+                        RenderTargetSize(static_cast<float>(width), static_cast<float>(height))
                     );
                 }
             });
@@ -312,7 +312,7 @@ export namespace helios::glfw {
          * @param updateContext Frame-local update context.
          * @param cmd Swap-buffers command.
          */
-        void swapBuffer(UpdateContext& updateContext, Session& session, entity::EntityManager<THandle>& entityManager, const SwapBuffersCommand<THandle>& cmd) noexcept {
+        void swapBuffer(UpdateContext&, Session&, entity::EntityManager<THandle>& entityManager, const SwapBuffersCommand<THandle>& cmd) noexcept {
 
             const auto entity = entityManager.entity(cmd.windowHandle);
 
@@ -432,7 +432,7 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        void pollEvents(UpdateContext& updateContext) noexcept {
+        void pollEvents(UpdateContext&) noexcept {
             if (!pollEvents_) {
                 return;
             }
@@ -466,7 +466,7 @@ export namespace helios::glfw {
                 }
 
                 glfwDestroyWindow(glfw->handle);
-                bool destroyed = entityManager.destroy(cmd.windowHandle);
+                [[maybe_unused]] bool destroyed = entityManager.destroy(cmd.windowHandle);
                 assert(destroyed && "Failed to destroy entity");
             }
 
@@ -479,7 +479,7 @@ export namespace helios::glfw {
          *
          * @param updateContext Frame-local update context.
          */
-        void shutdown(UpdateContext& updateContext, Session& session, CommandBuffer& commandBuffer) noexcept {
+        void shutdown(UpdateContext&, Session& session, CommandBuffer& commandBuffer) noexcept {
 
             glfwTerminate();
 
@@ -547,7 +547,7 @@ export namespace helios::glfw {
          *
          * @return `true` when the command was accepted.
          */
-        bool submit(PollEventsCommand&& command) noexcept {
+        bool submit(PollEventsCommand&&) noexcept {
             pollEvents_ = true;
             return true;
         }
@@ -559,7 +559,7 @@ export namespace helios::glfw {
          *
          * @return `true` when the command was accepted.
          */
-        bool submit(PlatformInitCommand&& command) noexcept {
+        bool submit(PlatformInitCommand&&) noexcept {
             assert(!initialized_ && "Application was already initialized.");
             shouldInit_ = true;
             return true;
@@ -626,7 +626,7 @@ export namespace helios::glfw {
          *
          * @return `true` when the command was accepted.
          */
-        bool submit(ShutdownCommand&& command)  noexcept {
+        bool submit(ShutdownCommand&&)  noexcept {
             shouldShutdown_ = true;
             return true;
         }
