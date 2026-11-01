@@ -11,6 +11,8 @@ module;
 #include <ranges>
 #include <vector>
 
+#include "helios-glfw-config.h"
+
 export module helios.glfw.GLFWPlatformManager;
 
 import helios.core.log;
@@ -312,7 +314,7 @@ export namespace helios::glfw {
          * @param updateContext Frame-local update context.
          * @param cmd Swap-buffers command.
          */
-        void swapBuffer(UpdateContext&, Session&, entity::EntityManager<THandle>& entityManager, const SwapBuffersCommand<THandle>& cmd) noexcept {
+        void swapBuffer(UpdateContext&, Session& session, entity::EntityManager<THandle>& entityManager, const SwapBuffersCommand<THandle>& cmd) noexcept {
 
             const auto entity = entityManager.entity(cmd.windowHandle);
 
@@ -329,9 +331,11 @@ export namespace helios::glfw {
                 return;
             }
 
+#if HELIOS_DEBUG
             assert((session.state<EngineState>() != EngineState::Booting) &&
                 "GLFWSwapBuffersSystem should not be running during boot");
             assert(glfw->handle && "GLFWWindowComponent has no native handle");
+#endif
             glfwSwapBuffers(glfw->handle);
         }
 
